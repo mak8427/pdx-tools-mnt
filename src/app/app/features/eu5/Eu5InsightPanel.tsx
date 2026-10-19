@@ -6,6 +6,7 @@ import { ContextGraphs } from "./history/ContextGraphs";
 import { useCurrentHistorySnapshot } from "./history/currentSnapshot";
 import { SaveHistory } from "./history/SaveHistory";
 import { GameButton } from "@/components/game/Button";
+import { AnimatedValue } from "./components/AnimatedValue";
 import type React from "react";
 import { useCallback, useState } from "react";
 import { ResizablePanel } from "./components/ResizablePanel";
@@ -499,7 +500,7 @@ function HeadlineStat({ label, value }: { label: string; value: string }) {
   return (
     <span className="flex items-baseline gap-1">
       <span className="font-game-num text-[13px] font-medium text-game-ink-100 tabular-nums">
-        {value}
+        <AnimatedValue value={value} />
       </span>
       <span className="text-[10px] tracking-[0.06em] text-game-ink-500 uppercase">{label}</span>
     </span>
