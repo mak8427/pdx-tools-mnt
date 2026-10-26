@@ -20,6 +20,11 @@ const FRONTEND_GOODS_ICONS_DIR: &str = concat!(
 );
 
 const TRADE_GOODS_ICON_PATH: &str = "game/main_menu/gfx/interface/icons/trade_goods";
+const ESTATE_ICON_PATH: &str = "game/main_menu/gfx/interface/icons/estates";
+const FRONTEND_ESTATE_ICONS_DIR: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../app/app/features/eu5/components/icons/estates"
+);
 const FLAGS_PER_ATLAS: usize = 128;
 
 struct FileProviderAdapter<P>(P);
@@ -112,6 +117,25 @@ where
             Ok((name, f.path))
         })
         .collect::<Result<_>>()?;
+
+    let estate_images = if options.dry_run || !options.minimal {
+        let mut images = fs
+            .walk_directory(ESTATE_ICON_PATH, &[".dds"])?
+            .into_iter()
+            .map(|path| {
+                let name = Path::new(&path)
+                    .file_stem()
+                    .unwrap()
+                    .to_string_lossy()
+                    .into_owned();
+                Ok((name, fs.fs_file(&path)?.path))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        images.sort_by(|left, right| left.0.cmp(&right.0));
+        images
+    } else {
+        Vec::new()
+    };
 
     // Bundle tracing must visit the coat of arms assets so they are included in
     // newly created source bundles. Full compiles also need them to generate
@@ -218,6 +242,21 @@ where
     );
 
     if !options.minimal {
+        let estate_dir = Path::new(FRONTEND_ESTATE_ICONS_DIR);
+        std::fs::create_dir_all(estate_dir)?;
+        imaging.montage(MontageRequest {
+            images: &estate_images,
+            output_path: estate_dir.join("estates.webp"),
+            format: OutputFormat::Webp {
+                quality: WebpQuality::Lossless,
+            },
+            sizing: MontageSizing::ScaledDown {
+                sizes: vec![Geometry::new(64, 64)],
+                filter: ScaleFilter::Lanczos,
+            },
+            background: Some(Color::Transparent),
+            additional_args: vec![],
+        })?;
         let frontend_goods_dir = Path::new(FRONTEND_GOODS_ICONS_DIR);
         std::fs::create_dir_all(frontend_goods_dir)?;
 

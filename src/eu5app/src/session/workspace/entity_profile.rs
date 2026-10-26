@@ -130,6 +130,7 @@ impl<'bump> Eu5Workspace<'bump> {
                 .filter_map(|(_, estate)| estate.as_ref())
                 .filter(|estate| estate.country == country_id && estate.existence == Some(true))
                 .map(|estate| EstateInfo {
+                    key: estate.estate_type.to_str().to_owned(),
                     name: estate.estate_type.to_str().replace('_', " "),
                     balance: estate.balance,
                     satisfaction: estate.satisfaction,

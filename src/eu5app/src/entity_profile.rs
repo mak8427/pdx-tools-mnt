@@ -392,6 +392,7 @@ pub struct CenterInfo {
 #[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
 #[serde(rename_all = "camelCase")]
 pub struct EstateInfo {
+    pub key: String,
     pub name: String,
     pub balance: Option<f64>,
     pub satisfaction: Option<f64>,
