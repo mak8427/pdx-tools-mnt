@@ -27,6 +27,25 @@ pub(crate) enum LocationMarket {
 /// The values of each location on one date. Identities are only compared,
 /// so their numbers have no other meaning.
 pub(crate) trait LocationValues {
+    fn strongest_center(&self, idx: LocationIdx) -> Option<(MapMode, u8)> {
+        [
+            MapMode::CenterEducation,
+            MapMode::CenterCulture,
+            MapMode::CenterProduction,
+            MapMode::CenterTrade,
+        ]
+        .into_iter()
+        .filter_map(|mode| {
+            self.center_level(idx, mode)
+                .filter(|level| *level > 0)
+                .map(|level| (mode, level))
+        })
+        .max_by_key(|(_, level)| *level)
+    }
+    /// Center tier at this save date; historical projections may lack it.
+    fn center_level(&self, _idx: LocationIdx, _mode: MapMode) -> Option<u8> {
+        None
+    }
     fn location_count(&self) -> usize;
     /// `None` when no country owns the location.
     fn owner(&self, idx: LocationIdx) -> Option<u32>;
@@ -170,7 +189,14 @@ fn gradient(mode: MapMode) -> Option<Gradient> {
         divisor: 1.0,
     };
     match mode {
-        MapMode::Political | MapMode::Religion | MapMode::Markets => None,
+        MapMode::Political
+        | MapMode::Religion
+        | MapMode::Markets
+        | MapMode::CenterOverview
+        | MapMode::CenterTrade
+        | MapMode::CenterProduction
+        | MapMode::CenterCulture
+        | MapMode::CenterEducation => None,
         MapMode::Control => Some(linear(Domain::Fixed(1.0))),
         MapMode::Population => Some(Gradient {
             scale: GradientScale::Log,
@@ -200,7 +226,14 @@ fn mode_value(values: &(impl LocationValues + ?Sized), idx: LocationIdx, mode: M
         MapMode::StateEfficacy => {
             values.fraction(idx, Fraction::Control) * values.metric(idx, Metric::Development)
         }
-        MapMode::Political | MapMode::Religion | MapMode::Markets => 0.0,
+        MapMode::Political
+        | MapMode::Religion
+        | MapMode::Markets
+        | MapMode::CenterOverview
+        | MapMode::CenterTrade
+        | MapMode::CenterProduction
+        | MapMode::CenterCulture
+        | MapMode::CenterEducation => 0.0,
     }
 }
 
@@ -320,6 +353,42 @@ pub(crate) fn paint(
                         GpuColor::from_rgb(20, 5, 5)
                             .blend(GpuColor::from_rgb(r, g, b), access.clamp(0.0, 1.0) as f32)
                     }
+                })
+                .collect();
+            PaintedMap {
+                primary,
+                secondary: None,
+                legend: MapLegend::Qualitative,
+            }
+        }
+        mode @ (MapMode::CenterOverview
+        | MapMode::CenterTrade
+        | MapMode::CenterProduction
+        | MapMode::CenterCulture
+        | MapMode::CenterEducation) => {
+            let primary = locations
+                .map(|idx| {
+                    terrain_color(layout, idx).unwrap_or_else(|| {
+                        let center = if mode == MapMode::CenterOverview {
+                            values.strongest_center(idx)
+                        } else {
+                            values
+                                .center_level(idx, mode)
+                                .filter(|level| *level > 0)
+                                .map(|level| (mode, level))
+                        };
+                        center.map_or(GpuColor::from_rgb(65, 69, 75), |(kind, level)| {
+                            let color = match kind {
+                                MapMode::CenterTrade => GpuColor::from_rgb(69, 151, 214),
+                                MapMode::CenterProduction => GpuColor::from_rgb(67, 176, 113),
+                                MapMode::CenterCulture => GpuColor::from_rgb(232, 172, 57),
+                                MapMode::CenterEducation => GpuColor::from_rgb(204, 92, 170),
+                                _ => GpuColor::DEBUG,
+                            };
+                            GpuColor::from_rgb(12, 15, 20)
+                                .blend(color, [0.0, 0.35, 0.55, 0.78, 1.0][level.min(4) as usize])
+                        })
+                    })
                 })
                 .collect();
             PaintedMap {

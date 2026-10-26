@@ -18,4 +18,13 @@ export const MAP_MODES: ModeConfig[] = [
   { value: "population", label: "Population" },
   { value: "populationGrowth", label: "Population Growth" },
   { value: "stateEfficacy", label: "Effective Development" },
+  { value: "centerOverview", label: "Location Centers" },
+];
+
+export const CENTER_MODES: ModeConfig[] = [
+  { value: "centerOverview", label: "All center types" },
+  { value: "centerTrade", label: "Trade" },
+  { value: "centerProduction", label: "Production" },
+  { value: "centerCulture", label: "Culture" },
+  { value: "centerEducation", label: "Education" },
 ];

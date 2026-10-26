@@ -25,6 +25,7 @@ present_dto! {
         Religion { religion: ReligionId => Localized<String> },
         StateEfficacy { value: f64 },
         PopulationGrowth { value: f64 },
+        Center { value: String },
     }
 
     #[serde(

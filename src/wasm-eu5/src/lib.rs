@@ -77,6 +77,11 @@ pub enum MapMode {
     Religion,
     StateEfficacy,
     PopulationGrowth,
+    CenterOverview,
+    CenterTrade,
+    CenterProduction,
+    CenterCulture,
+    CenterEducation,
 }
 
 #[derive(Debug, Clone, tsify::Tsify, Serialize)]
@@ -116,6 +121,11 @@ impl From<MapMode> for Eu5MapMode {
             MapMode::Religion => Eu5MapMode::Religion,
             MapMode::StateEfficacy => Eu5MapMode::StateEfficacy,
             MapMode::PopulationGrowth => Eu5MapMode::PopulationGrowth,
+            MapMode::CenterOverview => Eu5MapMode::CenterOverview,
+            MapMode::CenterTrade => Eu5MapMode::CenterTrade,
+            MapMode::CenterProduction => Eu5MapMode::CenterProduction,
+            MapMode::CenterCulture => Eu5MapMode::CenterCulture,
+            MapMode::CenterEducation => Eu5MapMode::CenterEducation,
         }
     }
 }
@@ -135,6 +145,11 @@ impl From<Eu5MapMode> for MapMode {
             Eu5MapMode::Religion => MapMode::Religion,
             Eu5MapMode::StateEfficacy => MapMode::StateEfficacy,
             Eu5MapMode::PopulationGrowth => MapMode::PopulationGrowth,
+            Eu5MapMode::CenterOverview => MapMode::CenterOverview,
+            Eu5MapMode::CenterTrade => MapMode::CenterTrade,
+            Eu5MapMode::CenterProduction => MapMode::CenterProduction,
+            Eu5MapMode::CenterCulture => MapMode::CenterCulture,
+            Eu5MapMode::CenterEducation => MapMode::CenterEducation,
         }
     }
 }

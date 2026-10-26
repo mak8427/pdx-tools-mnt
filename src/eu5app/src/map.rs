@@ -38,12 +38,25 @@ pub enum MapMode {
     Religion,
     StateEfficacy,
     PopulationGrowth,
+    CenterOverview,
+    CenterTrade,
+    CenterProduction,
+    CenterCulture,
+    CenterEducation,
 }
 
 impl MapMode {
     pub const fn selection_affects_domain(self) -> bool {
         match self {
-            MapMode::Political | MapMode::Control | MapMode::Markets | MapMode::Religion => false,
+            MapMode::Political
+            | MapMode::Control
+            | MapMode::Markets
+            | MapMode::Religion
+            | MapMode::CenterOverview
+            | MapMode::CenterTrade
+            | MapMode::CenterProduction
+            | MapMode::CenterCulture
+            | MapMode::CenterEducation => false,
             MapMode::Development
             | MapMode::Population
             | MapMode::RgoLevel
@@ -69,6 +82,11 @@ impl MapMode {
             MapMode::Religion => "Religion",
             MapMode::StateEfficacy => "Effective Development",
             MapMode::PopulationGrowth => "Population Growth",
+            MapMode::CenterOverview => "Location Centers",
+            MapMode::CenterTrade => "Trade Centers",
+            MapMode::CenterProduction => "Production Centers",
+            MapMode::CenterCulture => "Culture Centers",
+            MapMode::CenterEducation => "Education Centers",
         }
     }
 }

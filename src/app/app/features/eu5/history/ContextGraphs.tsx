@@ -95,6 +95,11 @@ const metrics: Record<MapMode, Metric[]> = {
   religion: [],
   rgoLevel: [{ label: "RGO levels", unit: "Levels", value: (c) => c.rgoLevels }],
   markets: [],
+  centerOverview: [],
+  centerTrade: [],
+  centerProduction: [],
+  centerCulture: [],
+  centerEducation: [],
 };
 const human = (s: string) => s.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 

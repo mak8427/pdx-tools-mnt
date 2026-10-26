@@ -4,6 +4,16 @@ use crate::gradient;
 use crate::map_projection::{Fraction, Metric};
 use eu5save::models::Color;
 
+pub(super) fn center_tier(modifier: &str, prefix: &str) -> Option<u8> {
+    match modifier.strip_prefix(prefix)? {
+        "local" => Some(1),
+        "regional" => Some(2),
+        "continental" => Some(3),
+        "world" => Some(4),
+        _ => None,
+    }
+}
+
 /// The values of the loaded save. Owners and their colors are those on the
 /// timeline date.
 pub(super) struct LiveValues<'a, 'bump> {
@@ -27,6 +37,24 @@ impl LiveValues<'_, '_> {
 }
 
 impl LocationValues for LiveValues<'_, '_> {
+    fn center_level(&self, idx: LocationIdx, mode: MapMode) -> Option<u8> {
+        let prefix = match mode {
+            MapMode::CenterTrade => "mnt_center_trade_",
+            MapMode::CenterProduction => "mnt_center_production_",
+            MapMode::CenterCulture => "mnt_center_culture_",
+            MapMode::CenterEducation => "mnt_center_education_",
+            _ => return None,
+        };
+        Some(
+            self.location(idx)
+                .timed_modifiers
+                .timed_modifiers
+                .iter()
+                .filter_map(|m| center_tier(m.modifier.to_str(), prefix))
+                .max()
+                .unwrap_or(0),
+        )
+    }
     fn location_count(&self) -> usize {
         self.workspace.gamestate.locations.len()
     }

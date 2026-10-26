@@ -34,6 +34,8 @@ function formatHoverStat(stat: HoverStat): string | null {
       return `${formatInt(stat.value.access * 100)}%`;
     case "religion":
       return stat.value.religion.name;
+    case "center":
+      return stat.value.value;
   }
 
   const _exhaustive: never = stat;

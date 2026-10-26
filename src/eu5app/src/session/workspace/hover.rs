@@ -1,3 +1,4 @@
+use super::map_painter::LocationValues;
 use super::*;
 use crate::population::{location_reproduction_rate, location_yearly_births};
 use crate::presentation::OwnedCountryName;
@@ -29,7 +30,16 @@ impl<'bump> Eu5Workspace<'bump> {
             .map(|anchor| self.same_entity(anchor, location_idx, mode))
             .unwrap_or(false);
 
-        if should_show_location {
+        if should_show_location
+            || matches!(
+                mode,
+                MapMode::CenterOverview
+                    | MapMode::CenterTrade
+                    | MapMode::CenterProduction
+                    | MapMode::CenterCulture
+                    | MapMode::CenterEducation
+            )
+        {
             HoverDisplayDataSource::Location {
                 location_id: location_idx.value(),
                 location: location_idx,
@@ -51,6 +61,39 @@ impl<'bump> Eu5Workspace<'bump> {
         location: &eu5save::models::Location<'_>,
     ) -> HoverStatSource {
         match mode {
+            mode @ (MapMode::CenterOverview
+            | MapMode::CenterTrade
+            | MapMode::CenterProduction
+            | MapMode::CenterCulture
+            | MapMode::CenterEducation) => {
+                let values = self.live_values();
+                let levels = [
+                    MapMode::CenterTrade,
+                    MapMode::CenterProduction,
+                    MapMode::CenterCulture,
+                    MapMode::CenterEducation,
+                ]
+                .into_iter()
+                .filter(|kind| mode == MapMode::CenterOverview || *kind == mode)
+                .filter_map(|kind| {
+                    let level = match values.center_level(location_idx, kind)? {
+                        1 => "Local",
+                        2 => "Regional",
+                        3 => "Continental",
+                        4 => "World",
+                        _ => return None,
+                    };
+                    Some(format!("{}: {level}", kind.name()))
+                })
+                .collect::<Vec<_>>();
+                HoverStatSource::Center {
+                    value: if levels.is_empty() {
+                        "No center recorded / unavailable".into()
+                    } else {
+                        levels.join(" · ")
+                    },
+                }
+            }
             MapMode::Political => HoverStatSource::None,
             MapMode::Control => HoverStatSource::Control {
                 value: location.control,
@@ -146,6 +189,11 @@ impl<'bump> Eu5Workspace<'bump> {
 
     fn country_stat(&self, mode: MapMode, owner_id: CountryId) -> HoverStatSource {
         match mode {
+            MapMode::CenterOverview
+            | MapMode::CenterTrade
+            | MapMode::CenterProduction
+            | MapMode::CenterCulture
+            | MapMode::CenterEducation => HoverStatSource::None,
             MapMode::Political => HoverStatSource::None,
             MapMode::Control => {
                 let mut control_sum = 0.0;

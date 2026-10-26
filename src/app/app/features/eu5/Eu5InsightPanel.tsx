@@ -279,6 +279,8 @@ function PanelContentInner() {
     content = <ReligionInsight />;
   } else if (currentMapMode === "rgoLevel") {
     content = <RgoInsight />;
+  } else if (currentMapMode.startsWith("center")) {
+    content = <CenterLegend />;
   }
 
   if (content == null) {
@@ -332,6 +334,23 @@ function EmptyInsightState() {
   );
 }
 
+function CenterLegend() {
+  return (
+    <div className="p-4 text-sm text-game-ink-500">
+      <p>Color shows the center type; brighter shades indicate higher levels.</p>
+      <p className="mt-3">
+        Where types overlap, the highest level determines the color. Ties use Trade,
+        Production, Culture, then Education. Hover to see every center or select a
+        category to inspect it separately.
+      </p>
+      <p className="mt-3">
+        Center information is read from the save date. Imported historical
+        projections do not yet store center levels.
+      </p>
+    </div>
+  );
+}
+
 export const MAP_MODE_TITLES = {
   political: "Great powers",
   control: "Control",
@@ -345,6 +364,11 @@ export const MAP_MODE_TITLES = {
   religion: "Religion",
   rgoLevel: "RGO Level",
   populationGrowth: "Population Growth",
+  centerOverview: "Location Centers",
+  centerTrade: "Trade Centers",
+  centerProduction: "Production Centers",
+  centerCulture: "Culture Centers",
+  centerEducation: "Education Centers",
 } as const;
 
 function InsightPanelTitle() {
