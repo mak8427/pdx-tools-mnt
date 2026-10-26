@@ -177,7 +177,7 @@ function HistoryChart({
   return (
     <section className="mb-4 rounded-(--radius-panel) border border-game-line-strong bg-game-panel-2 p-3">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-game-ink-200 font-game-ui text-sm font-semibold">{title}</h3>
+        <h3 className="text-game-ink-100 font-game-ui text-sm font-semibold">{title}</h3>
         <button className="text-xs text-game-ink-500 hover:text-game-ink-100" onClick={exportCsv}>
           Export CSV
         </button>

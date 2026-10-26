@@ -6,6 +6,7 @@ import { useMapHistory } from "../history/context";
 import { CENTER_MODES, MAP_MODES } from "./modeConfig";
 import type { ModeConfig } from "./modeConfig";
 import type { MapMode } from "@/wasm/wasm_eu5";
+import { GameSelect } from "../components/Select";
 
 export function MapModesSection() {
   const live = useEu5TimelineLive();
@@ -32,16 +33,15 @@ export function MapModesSection() {
         {centerActive && (
           <label className="flex flex-col gap-1 px-3.5 py-2 text-xs text-game-ink-500">
             Center category
-            <select
-              value={currentMapMode}
-              disabled={locked}
-              onChange={(event) => engine.trigger.selectMapMode(event.target.value as MapMode)}
-              className="rounded border border-game-line bg-game-overlay px-2 py-1.5 text-game-ink-100 disabled:opacity-40"
-            >
-              {CENTER_MODES.map((mode) => (
-                <option key={mode.value} value={mode.value}>{mode.label}</option>
-              ))}
-            </select>
+            <GameSelect value={currentMapMode} disabled={locked}
+              onValueChange={(value) => engine.trigger.selectMapMode(value as MapMode)}>
+              <GameSelect.Trigger aria-label="Center category"><GameSelect.Value /></GameSelect.Trigger>
+              <GameSelect.Content>
+                {CENTER_MODES.map((mode) => (
+                  <GameSelect.Item key={mode.value} value={mode.value}>{mode.label}</GameSelect.Item>
+                ))}
+              </GameSelect.Content>
+            </GameSelect>
           </label>
         )}
       </SidebarNav.Section>
