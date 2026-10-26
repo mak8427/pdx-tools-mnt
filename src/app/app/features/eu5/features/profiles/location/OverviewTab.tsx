@@ -25,6 +25,19 @@ export function LocationOverviewTab({ profile }: Props) {
         {s.rawMaterial && <StatItem boxed label="Raw Material" value={s.rawMaterial.name} />}
       </div>
 
+      <div>
+        <SectionTitle className="mb-1">Location centers</SectionTitle>
+        {s.centers.length ? (
+          <div className="grid grid-cols-2 gap-2">
+            {s.centers.map((center) => (
+              <StatItem key={center.category} boxed label={center.category} value={center.level} />
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-game-ink-500">No center modifiers recorded for this location.</p>
+        )}
+      </div>
+
       {profile.header.owner && (
         <div>
           <SectionTitle className="mb-1">Owner</SectionTitle>

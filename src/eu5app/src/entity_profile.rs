@@ -376,7 +376,28 @@ present_dto! {
         wealth: f64,
         rgo_level: f64,
         market_access: f64,
+        centers: Vec<CenterInfo>,
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
+#[serde(rename_all = "camelCase")]
+pub struct CenterInfo {
+    pub category: String,
+    pub level: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "tsify", derive(tsify::Tsify))]
+#[serde(rename_all = "camelCase")]
+pub struct EstateInfo {
+    pub name: String,
+    pub balance: Option<f64>,
+    pub satisfaction: Option<f64>,
+    pub wealth_impact: Option<f64>,
+    pub paid_taxes: Option<f64>,
+    pub trade_income: Option<f64>,
 }
 
 #[derive(Debug, Clone)]
@@ -542,6 +563,7 @@ present_dto! {
         religion: CountryReligionSectionSource => CountryReligionSection,
         locations: LocationsSectionSource => LocationsSection,
         diplomacy: DiplomacySectionSource => DiplomacySection,
+        estates: Option<Vec<EstateInfo>>,
     }
 }
 

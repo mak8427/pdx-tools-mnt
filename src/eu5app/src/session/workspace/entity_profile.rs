@@ -1,7 +1,31 @@
 use eu5save::{hash::FnvHashMap, models::CountryDiplomacy};
 
 use super::*;
+use crate::entity_profile::{CenterInfo, EstateInfo};
 use crate::population::{LITERACY_SCALE, POP_SIZE_SCALE};
+
+fn location_centers(location: &eu5save::models::Location<'_>) -> Vec<CenterInfo> {
+    let mut centers = Vec::new();
+    for category in ["trade", "production", "culture", "education"] {
+        let level = ["world", "continental", "regional", "local"]
+            .into_iter()
+            .find(|level| {
+                let key = format!("mnt_center_{category}_{level}");
+                location
+                    .timed_modifiers
+                    .timed_modifiers
+                    .iter()
+                    .any(|m| m.modifier.to_str() == key)
+            });
+        if let Some(level) = level {
+            centers.push(CenterInfo {
+                category: category.into(),
+                level: level.into(),
+            });
+        }
+    }
+    centers
+}
 
 impl<'bump> Eu5Workspace<'bump> {
     /// Returns the entity kind for the current single-entity scope.
@@ -98,12 +122,30 @@ impl<'bump> Eu5Workspace<'bump> {
         let religion = self.country_religion(locations.clone());
         let locations_section = self.build_locations_section(locations);
         let diplomacy = self.country_diplomacy(country_idx)?;
+        let country_id = self.gamestate.countries.index(country_idx).id();
+        let estates = self.gamestate.estate_manager.as_ref().map(|manager| {
+            manager
+                .database
+                .iter()
+                .filter_map(|(_, estate)| estate.as_ref())
+                .filter(|estate| estate.country == country_id && estate.existence == Some(true))
+                .map(|estate| EstateInfo {
+                    name: estate.estate_type.to_str().replace('_', " "),
+                    balance: estate.balance,
+                    satisfaction: estate.satisfaction,
+                    wealth_impact: estate.wealth_impact,
+                    paid_taxes: estate.last_month.as_ref().and_then(|a| a.paid_taxes),
+                    trade_income: estate.last_month.as_ref().and_then(|a| a.trade_income),
+                })
+                .collect()
+        });
         Some(CountryProfile {
             header,
             overview,
             religion,
             locations: locations_section,
             diplomacy,
+            estates,
         })
     }
 
@@ -1092,6 +1134,7 @@ impl<'bump> Eu5Workspace<'bump> {
                 wealth: loc.possible_tax,
                 rgo_level: self.get_location_rgo_levels()[idx],
                 market_access: loc.market_access,
+                centers: location_centers(loc),
             },
             buildings,
             population_profile,
