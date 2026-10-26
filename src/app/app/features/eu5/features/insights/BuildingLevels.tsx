@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { createColumnHelper } from "@/lib/tanstack-table";
 import { EChart } from "@/components/viz";
 import type { EChartsOption } from "@/components/viz";
@@ -39,6 +39,28 @@ function BuildingLevelsScopeHeader({ data }: { data?: BuildingLevelsScopeSummary
       <ReadoutFigure value={`${formatFloat(data.foreignShare * 100, 1)}%`} label="foreign-owned" />
     </InsightReadout>
   );
+}
+
+const categoryColors = [
+  "#e5b85c",
+  "#64b5cd",
+  "#ce86bd",
+  "#94bf70",
+  "#df866a",
+  "#9c9ed7",
+  "#71baaa",
+  "#cda57b",
+];
+function categoryColor(category: string) {
+  let hash = 0;
+  for (const c of category) hash = (hash * 31 + c.charCodeAt(0)) >>> 0;
+  return categoryColors[hash % categoryColors.length];
+}
+function categoryLabel(category: string) {
+  return category
+    .replace(/_category$/, "")
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function BuildingTypesChart({ types }: { types: BuildingTypeSummary[] }) {
@@ -87,7 +109,11 @@ function BuildingTypesChart({ types }: { types: BuildingTypeSummary[] }) {
           type: "bar",
           name: "Domestic",
           stack: "levels",
-          itemStyle: { color: buildingOwnershipColors.domestic, ...markGap },
+          itemStyle: {
+            color: (p: { dataIndex: number }) =>
+              categoryColor(rows[p.dataIndex]?.category ?? "unknown"),
+            ...markGap,
+          },
           encode: { x: "domestic", y: "name" },
         },
         {
@@ -128,9 +154,7 @@ function BuildingTypesChart({ types }: { types: BuildingTypeSummary[] }) {
   }, [rows]);
 
   const height = Math.max(120, rows.length * 28 + 40);
-  return (
-    <EChart gpuBars mergeUpdates option={option} style={{ height: `${height}px`, width: "100%" }} />
-  );
+  return <EChart mergeUpdates option={option} style={{ height: `${height}px`, width: "100%" }} />;
 }
 
 function ForeignShareCallout({ scope }: { scope: BuildingLevelsScopeSummary }) {
@@ -340,11 +364,15 @@ function ForeignOwnerCellsTable({ cells }: { cells: BuildingTypeForeignOwnerCell
 }
 
 export function BuildingLevelsInsight() {
+  const [category, setCategory] = useState("all");
   const insightQuery = useEu5SelectionTrigger((engine) =>
     engine.queries.getBuildingLevelsInsight(),
   );
 
   const types = insightQuery.data?.types ?? [];
+  const categories = [...new Set(types.map((type) => type.category ?? "unknown"))].sort();
+  const filteredTypes =
+    category === "all" ? types : types.filter((type) => (type.category ?? "unknown") === category);
   const foreignOwnerCells = insightQuery.data?.foreignOwnerCells ?? [];
   const foreignLocationRows = insightQuery.data?.foreignLocationRows ?? [];
   const topLocations = insightQuery.data?.topLocations ?? [];
@@ -364,7 +392,24 @@ export function BuildingLevelsInsight() {
           {types.length > 0 && (
             <section>
               <SectionTitle>Building levels by type</SectionTitle>
-              <BuildingTypesChart types={types} />
+              <div className="flex flex-wrap gap-2 py-2" aria-label="Building category filters">
+                {["all", ...categories].map((name) => (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => setCategory(name)}
+                    aria-pressed={category === name}
+                    className="rounded border px-2 py-1 text-xs text-white"
+                    style={{
+                      borderColor: name === "all" ? undefined : categoryColor(name),
+                      opacity: category === "all" || category === name ? 1 : 0.6,
+                    }}
+                  >
+                    {name === "all" ? "All categories" : categoryLabel(name)}
+                  </button>
+                ))}
+              </div>
+              <BuildingTypesChart types={filteredTypes} />
             </section>
           )}
 

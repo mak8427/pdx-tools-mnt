@@ -1,6 +1,7 @@
 use super::parsing::{
-    parse_building_keys, parse_culture_keys, parse_default_map, parse_goods, parse_locations_data,
-    parse_map_mode_colors, parse_named_locations, parse_religion_keys, resolve_goods,
+    definition_key, parse_building_categories, parse_building_keys, parse_culture_keys,
+    parse_default_map, parse_goods, parse_locations_data, parse_map_mode_colors,
+    parse_named_locations, parse_religion_keys, resolve_goods,
 };
 use crate::game_data::game_install::parsing::LocationTerrain;
 use crate::game_data::{GameData, GameDataError, GoodData, Localization, TextureProvider};
@@ -165,6 +166,9 @@ impl PalettedTextures {
 }
 
 pub trait GameFileSource {
+    fn localization_overrides(&self) -> Result<Vec<String>, GameDataError> {
+        Ok(Vec::new())
+    }
     fn open_file<'a>(&'a self, path: &str) -> Result<Box<dyn Read + 'a>, GameDataError>;
     fn read_to_string(&self, path: &str) -> Result<String, GameDataError>;
     fn walk_directory(&self, path: &str, ends_with: &[&str]) -> Result<Vec<String>, GameDataError>;
@@ -174,6 +178,9 @@ impl<T> GameFileSource for &T
 where
     T: GameFileSource,
 {
+    fn localization_overrides(&self) -> Result<Vec<String>, GameDataError> {
+        (**self).localization_overrides()
+    }
     fn open_file<'a>(&'a self, path: &str) -> Result<Box<dyn Read + 'a>, GameDataError> {
         (**self).open_file(path)
     }
@@ -205,7 +212,7 @@ impl<T: GameFileSource + ?Sized> Eu5GameFileSourceExt for T {
     fn parse_goods(&self) -> Result<FxHashMap<String, GoodData>, GameDataError> {
         let goods_files = self.walk_directory("game/in_game/common/goods", &[".txt"])?;
 
-        let mut raw_goods = FxHashMap::default();
+        let mut raw_goods: FxHashMap<String, super::parsing::RawGoodData> = FxHashMap::default();
         for path in goods_files {
             let Some(file_name) = path.rsplit('/').next() else {
                 continue;
@@ -214,11 +221,40 @@ impl<T: GameFileSource + ?Sized> Eu5GameFileSourceExt for T {
                 continue;
             }
             let data = self.read_to_string(&path)?;
-            raw_goods.extend(parse_goods(&data, &path)?);
+            for (key, patch) in parse_goods(&data, &path)? {
+                let name = definition_key(&key).to_owned();
+                if key.starts_with("INJECT:") {
+                    let good = raw_goods.get_mut(&name).ok_or_else(|| {
+                        GameDataError::MissingData(format!(
+                            "INJECT references missing good '{name}' in {path}"
+                        ))
+                    })?;
+                    if patch.color.is_some() {
+                        good.color = patch.color;
+                    }
+                    if patch.default_market_price.is_some() {
+                        good.default_market_price = patch.default_market_price;
+                    }
+                    if patch.transport_cost.is_some() {
+                        good.transport_cost = patch.transport_cost;
+                    }
+                } else {
+                    raw_goods.insert(name, patch);
+                }
+            }
         }
 
-        let color_data = self.read_to_string("game/main_menu/common/named_colors/02_map.txt")?;
-        let colors = parse_map_mode_colors(&color_data)?;
+        let mut colors = FxHashMap::default();
+        for path in self.walk_directory("game/main_menu/common/named_colors", &[".txt"])? {
+            if path
+                .rsplit('/')
+                .next()
+                .is_some_and(|name| name.to_ascii_lowercase().contains("readme"))
+            {
+                continue;
+            }
+            colors.extend(parse_map_mode_colors(&self.read_to_string(&path)?)?);
+        }
         resolve_goods(raw_goods, &colors)
     }
 
@@ -314,6 +350,15 @@ impl<T: GameFileSource + ?Sized> Eu5GameFileSourceExt for T {
                         entries.insert(key.to_owned(), value.to_owned());
                     }
                 }
+            }
+        }
+
+        // Mods use their own filenames rather than the vanilla blessed list.
+        // Keep all their keys so $references$ and custom names remain resolvable.
+        for path in self.localization_overrides()? {
+            let data = self.read_to_string(&path)?;
+            for (key, value) in super::parsing::parse_localization(&data) {
+                entries.insert(key.to_owned(), value.to_owned());
             }
         }
 
@@ -565,12 +610,33 @@ impl RawGameData {
         let religion_keys = fs.parse_religion_keys()?;
         let culture_keys = fs.parse_culture_keys()?;
         let goods_keys: FxHashSet<String> = goods.keys().cloned().collect();
-        let localizations = fs.load_blessed_localizations(
+        let mut localizations = fs.load_blessed_localizations(
             &goods_keys,
             &building_keys,
             &religion_keys,
             &culture_keys,
         )?;
+
+        // Store category identities in the existing localized bundle so old
+        // game bundles remain readable without a binary schema migration.
+        for path in fs.walk_directory("game/in_game/common/building_types", &[".txt"])? {
+            if path
+                .rsplit('/')
+                .next()
+                .is_some_and(|n| n.to_ascii_lowercase().contains("readme"))
+            {
+                continue;
+            }
+            for (key, category) in parse_building_categories(&fs.read_to_string(&path)?)? {
+                let name = definition_key(&key);
+                let target = format!("__mnt_building_category__{name}");
+                if let Some(category) = category {
+                    localizations.insert(target, category);
+                } else if !key.starts_with("INJECT:") {
+                    localizations.remove(&target);
+                }
+            }
+        }
 
         let me = Self {
             locations: locations.collect(),
@@ -673,6 +739,34 @@ mod tests {
             files.sort();
             Ok(files)
         }
+    }
+
+    #[test]
+    fn mnt_replacements_injections_and_extra_colors_resolve_to_save_keys() {
+        let source = FakeSource::default()
+            .with_file("game/in_game/common/goods/00_default.txt", "tar = { color = goods_tar default_market_price = 2 transport_cost = 4 }")
+            .with_file("game/in_game/common/goods/MnT.txt", "REPLACE:tar = { color = goods_tar default_market_price = 1 } credit = { color = goods_credit default_market_price = 1 }")
+            .with_file("game/in_game/common/goods/zz_patch.txt", "INJECT:credit = { transport_cost = 0.3 }")
+            .with_file("game/main_menu/common/named_colors/02_map.txt", "colors = { goods_tar = rgb { 10 20 30 } }")
+            .with_file("game/main_menu/common/named_colors/MnT_map.txt", "colors = { goods_credit = rgb { 86 142 136 } }");
+        let goods = source.parse_goods().unwrap();
+        assert_eq!(goods.len(), 2);
+        assert_eq!(goods["tar"].default_market_price, 1.0);
+        assert_eq!(goods["tar"].transport_cost, 1.0);
+        assert_eq!(goods["credit"].transport_cost, 0.3);
+        assert_eq!(goods["credit"].color_hex, crate::Srgb([86, 142, 136]));
+    }
+
+    #[test]
+    fn mnt_building_prefixes_do_not_leak_into_localization_keys() {
+        let keys = parse_building_keys(
+            "REPLACE:marketplace = {} INJECT:bank = {} RGO_building_lumber = {}",
+        )
+        .unwrap();
+        assert!(keys.contains("marketplace"));
+        assert!(keys.contains("bank"));
+        assert!(keys.contains("RGO_building_lumber"));
+        assert!(!keys.contains("REPLACE:marketplace"));
     }
 
     #[test]

@@ -1,3 +1,4 @@
+import { aggregateMarkets } from "./marketAggregate";
 import { campaignAnalysis } from "./analysisClient";
 import { useCountryMarketCenters, useAnalysisHistory } from "./useAnalysisHistory";
 import type { AnalysisDescriptor } from "./analysisTypes";
@@ -18,7 +19,14 @@ import styles from "@/features/eu5/history/Timeline.module.css";
 import { useEu5PlaythroughId } from "../store";
 import { useCurrentHistorySnapshot } from "./currentSnapshot";
 
-type Metric = "price" | "supply" | "demand" | "stockpile" | "population" | "development";
+type Metric =
+  | "balance"
+  | "price"
+  | "supply"
+  | "demand"
+  | "stockpile"
+  | "population"
+  | "development";
 type HistoryPreferences = {
   metricState: { mode: MapMode; value: Metric };
   good: string;
@@ -28,6 +36,7 @@ type HistoryPreferences = {
 };
 const preferences = new Map<string, HistoryPreferences>();
 const metricNames: Record<Metric, string> = {
+  balance: "Supply and demand",
   price: "Price",
   supply: "Supply",
   demand: "Demand",
@@ -70,7 +79,7 @@ export function SaveHistory({
   const playthroughId = useEu5PlaythroughId();
   const { data: version } = useEu5Trigger((engine) => engine.queries.getSaveVersion(), []);
   const currentSnapshot = useCurrentHistorySnapshot(version);
-  const defaultMetric = mapMode === "population" || mapMode === "development" ? mapMode : "price";
+  const defaultMetric = mapMode === "population" || mapMode === "development" ? mapMode : "balance";
   const [metricState, setMetricState] = useState<{ mode: MapMode; value: Metric }>({
     ...(preferences.get(playthroughId ?? "")?.metricState ?? {
       mode: mapMode,
@@ -132,11 +141,7 @@ export function SaveHistory({
       )
       .sort((a, b) => labels[a].localeCompare(labels[b]));
     const chosenMarkets = markets.filter((m) => marketIds.includes(m));
-    const activeMarkets = chosenMarkets.length
-      ? chosenMarkets
-      : marketIds.length
-        ? [marketIds.find((id) => labels[id].toLowerCase() === "london") ?? marketIds[0]]
-        : [];
+    const activeMarkets = chosenMarkets.length ? chosenMarkets : marketIds;
     return { marketIds, activeMarkets };
   }, [focusMarketCenter, focusCenters, labels, markets]);
   const countries = useMemo(
@@ -171,23 +176,39 @@ export function SaveHistory({
   );
   const series = useMemo(
     () =>
-      entities.map((entity) => ({
-        name: isMarket
-          ? labels[entity]
-          : entity === "world"
-            ? "World · owned locations"
-            : (countryNames[entity] ?? entity),
-        raw: dates.map((s) => {
-          if (isMarket)
-            return (
-              marketObservation(s, Number(entity), activeGood)?.[
-                metric as "price" | "supply" | "demand" | "stockpile"
-              ] ?? null
-            );
-          if (entity === "world") return s[metric as "population" | "development"];
-          return countryObservation(s, entity)?.[metric as "population" | "development"] ?? null;
-        }),
-      })),
+      isMarket && metric === "balance"
+        ? (["supply", "demand"] as const).map((field) => ({
+            name: field === "supply" ? "Supply" : "Demand",
+            raw: dates.map((snapshot) => {
+              return aggregateMarkets(snapshot.markets)[field];
+            }),
+          }))
+        : isMarket && metric === "price"
+          ? [
+              {
+                name: "Weighted market price",
+                raw: dates.map((snapshot) => aggregateMarkets(snapshot.markets).price),
+              },
+            ]
+          : entities.map((entity) => ({
+              name: isMarket
+                ? labels[entity]
+                : entity === "world"
+                  ? "World · owned locations"
+                  : (countryNames[entity] ?? entity),
+              raw: dates.map((s) => {
+                if (isMarket)
+                  return (
+                    marketObservation(s, Number(entity), activeGood)?.[
+                      metric as "price" | "supply" | "demand" | "stockpile"
+                    ] ?? null
+                  );
+                if (entity === "world") return s[metric as "population" | "development"];
+                return (
+                  countryObservation(s, entity)?.[metric as "population" | "development"] ?? null
+                );
+              }),
+            })),
     [dates, entities, isMarket, activeGood, metric, countryNames, labels],
   );
   const indexUnavailable =
@@ -329,7 +350,9 @@ export function SaveHistory({
                   Metric
                   <select value={metric} onChange={(e) => setMetric(e.target.value as Metric)}>
                     {Object.entries(metricNames)
-                      .filter(([v]) => ["price", "supply", "demand", "stockpile"].includes(v))
+                      .filter(([v]) =>
+                        ["balance", "price", "supply", "demand", "stockpile"].includes(v),
+                      )
                       .map(([v, label]) => (
                         <option key={v} value={v}>
                           {label}
@@ -351,18 +374,14 @@ export function SaveHistory({
                     </select>
                   </label>
                   <label>
-                    Markets · choose up to six
+                    Markets · select to filter; none means all
                     <select
                       aria-label="Markets"
                       multiple
                       size={8}
-                      value={activeMarkets}
+                      value={markets}
                       onChange={(e) =>
-                        setMarkets(
-                          Array.from(e.target.selectedOptions)
-                            .map((o) => o.value)
-                            .slice(0, 6),
-                        )
+                        setMarkets(Array.from(e.target.selectedOptions).map((o) => o.value))
                       }
                     >
                       {marketIds.map((id) => (
@@ -396,7 +415,7 @@ export function SaveHistory({
               )}
               <p className={styles.help}>
                 {isMarket
-                  ? "Markets are matched by center location, not reusable market IDs. A relocated market becomes a separate series."
+                  ? "Supply and demand are summed across selected markets; with none selected, all markets are included. Missing observations remain gaps."
                   : "Metrics follow this section and the selected nation. Countries are matched by stable ID; absent countries remain gaps."}
               </p>
             </aside>
@@ -450,6 +469,34 @@ export function SaveHistory({
                     records remain gaps. The moving markers follow the map date; animation between
                     points is visual only.
                   </p>
+                </div>
+              )}
+              {isMarket && dates.length > 0 && (
+                <div className={styles.chart}>
+                  <h2>Markets · latest observation</h2>
+                  <p className={styles.help}>
+                    Price is weighted by quantity traded. Supply and demand are saved market values.
+                  </p>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Market</th>
+                        <th>Supply</th>
+                        <th>Demand</th>
+                        <th>Price</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dates[dates.length - 1].markets.map((m) => (
+                        <tr key={`${m.marketId}/${m.good}`}>
+                          <td>{labels[String(m.center)] ?? m.centerName ?? m.center}</td>
+                          <td>{m.supply?.toFixed(2) ?? "—"}</td>
+                          <td>{m.demand?.toFixed(2) ?? "—"}</td>
+                          <td>{m.price?.toFixed(2) ?? "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
               {visible && (

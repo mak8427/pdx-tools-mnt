@@ -9,6 +9,7 @@ impl<'bump> Eu5Workspace<'bump> {
             self.current_map_mode,
             &self.game_data,
             &self.location_building_levels,
+            &self.location_rgo_levels,
         )
     }
     pub(crate) fn calculate_political_world_scoreboard(&self) -> PoliticalWorldScoreboard {

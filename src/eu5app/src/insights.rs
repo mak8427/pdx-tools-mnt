@@ -546,6 +546,7 @@ pub mod buildings {
 
         pub BuildingTypeSummary<'a> {
             building: crate::presentation::BuildingKeyRef<'a> => Localized<String>,
+            category: crate::presentation::BuildingCategoryRef<'a> => Option<String>,
             levels: f64,
             foreign_levels: f64,
             employed: f64,

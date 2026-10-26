@@ -7,6 +7,8 @@ pub mod de;
 pub mod eu4;
 pub mod eu5;
 mod file_provider;
+mod mod_file_provider;
+pub use mod_file_provider::ModFileProvider;
 mod file_tracker;
 pub mod http;
 pub mod images;

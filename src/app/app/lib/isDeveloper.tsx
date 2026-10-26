@@ -1,5 +1,5 @@
 export function getIsDeveloper() {
-  return localStorage.getItem("developer") === "1";
+  return localStorage.getItem("developer") !== "0";
 }
 
 export type LogLevel = "error" | "warn" | "info" | "debug" | "trace";

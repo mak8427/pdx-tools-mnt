@@ -91,7 +91,7 @@ pub fn parse_locations_data(
 #[derive(Debug, Deserialize)]
 pub struct RawGoodData {
     pub color: Option<String>,
-    pub default_market_price: f64,
+    pub default_market_price: Option<f64>,
     pub transport_cost: Option<f64>,
 }
 
@@ -142,13 +142,42 @@ impl<'de> Deserialize<'de> for ClauseHexColor {
     }
 }
 
+pub fn definition_key(key: &str) -> &str {
+    key.strip_prefix("REPLACE:")
+        .or_else(|| key.strip_prefix("INJECT:"))
+        .unwrap_or(key)
+}
+
 pub fn parse_building_keys(data: &str) -> Result<FxHashSet<String>, GameDataError> {
     let reader = jomini::text::TokenReader::new(data.as_bytes());
     let buildings: FxHashMap<String, IgnoredAny> =
         jomini::text::de::TextDeserializer::from_utf8_reader(reader)
             .deserialize()
             .map_err(|e| GameDataError::Jomini(e, "building_types"))?;
-    Ok(buildings.into_keys().collect())
+    Ok(buildings
+        .into_keys()
+        .map(|key| definition_key(&key).to_owned())
+        .collect())
+}
+
+/// Extract only the top-level building category; production-method categories
+/// nested inside a building are deliberately ignored.
+pub fn parse_building_categories(
+    data: &str,
+) -> Result<FxHashMap<String, Option<String>>, GameDataError> {
+    #[derive(Deserialize)]
+    struct BuildingDefinition {
+        category: Option<String>,
+    }
+    let reader = jomini::text::TokenReader::new(data.as_bytes());
+    let buildings: FxHashMap<String, BuildingDefinition> =
+        jomini::text::de::TextDeserializer::from_utf8_reader(reader)
+            .deserialize()
+            .map_err(|e| GameDataError::Jomini(e, "building_types"))?;
+    Ok(buildings
+        .into_iter()
+        .map(|(key, value)| (key, value.category))
+        .collect())
 }
 
 pub fn parse_religion_keys(data: &str) -> Result<FxHashSet<String>, GameDataError> {
@@ -157,7 +186,10 @@ pub fn parse_religion_keys(data: &str) -> Result<FxHashSet<String>, GameDataErro
         jomini::text::de::TextDeserializer::from_utf8_reader(reader)
             .deserialize()
             .map_err(|e| GameDataError::Jomini(e, "religions"))?;
-    Ok(religions.into_keys().collect())
+    Ok(religions
+        .into_keys()
+        .map(|key| definition_key(&key).to_owned())
+        .collect())
 }
 
 pub fn parse_culture_keys(data: &str) -> Result<FxHashSet<String>, GameDataError> {
@@ -166,7 +198,10 @@ pub fn parse_culture_keys(data: &str) -> Result<FxHashSet<String>, GameDataError
         jomini::text::de::TextDeserializer::from_utf8_reader(reader)
             .deserialize()
             .map_err(|e| GameDataError::Jomini(e, "cultures"))?;
-    Ok(cultures.into_keys().collect())
+    Ok(cultures
+        .into_keys()
+        .map(|key| definition_key(&key).to_owned())
+        .collect())
 }
 
 pub fn parse_goods(
@@ -335,11 +370,14 @@ pub fn resolve_goods(
                     "good '{name}' references unknown color '{color_name}'"
                 ))
             })?;
+            let default_market_price = good.default_market_price.ok_or_else(|| {
+                GameDataError::MissingData(format!("good '{name}' has no default_market_price"))
+            })?;
             Ok((
                 name,
                 GoodData {
                     color_hex: Srgb(rgb),
-                    default_market_price: good.default_market_price,
+                    default_market_price,
                     transport_cost: good.transport_cost.unwrap_or(1.0),
                 },
             ))
@@ -351,12 +389,11 @@ static QUOTE_RE: LazyLock<regex::Regex> = LazyLock::new(|| regex::Regex::new("\"
 
 pub fn parse_localization(data: &str) -> impl Iterator<Item = (&str, &str)> + '_ {
     data.lines().skip(1).filter_map(|line| {
-        let mut splits = line.split(':');
-        let key = splits.next()?.trim();
+        let (key, field2) = line.split_once(':')?;
+        let key = key.trim();
         if key.starts_with('#') || key.is_empty() {
             return None;
         }
-        let field2 = splits.next()?;
         let v = QUOTE_RE.captures(field2)?;
         Some((key, v.get(1)?.as_str()))
     })
@@ -437,6 +474,19 @@ colors = {
         assert_eq!(parsed.get("TEU_ADJ").unwrap(), "Teutonic");
         assert_eq!(parsed.get("MEDICI").unwrap(), "Medici");
         assert_eq!(parsed.get("DNS").unwrap(), "Kalmar Union");
+    }
+
+    #[test]
+    fn building_category_ignores_production_method_categories() {
+        let categories = parse_building_categories(r#"RGO_building_iron = { category = rgo_building_category unique_production_methods = { iron_method = { category = building_maintenance } } } INJECT:marketplace = { category = trade_category }"#).unwrap();
+        assert_eq!(
+            categories["RGO_building_iron"].as_deref(),
+            Some("rgo_building_category")
+        );
+        assert_eq!(
+            categories["INJECT:marketplace"].as_deref(),
+            Some("trade_category")
+        );
     }
 
     #[test]
@@ -549,6 +599,13 @@ non_ownable = { sahara }
     }
 
     #[test]
+    fn mod_localization_retains_colons_in_display_names() {
+        let entries: Vec<_> =
+            parse_localization("l_english:\n credit: \"Credit: available\"\n").collect();
+        assert_eq!(entries, [("credit", "Credit: available")]);
+    }
+
+    #[test]
     fn test_parse_goods() {
         let data = r#"
 wool = {
@@ -573,13 +630,16 @@ porcelain = {
             goods.get("wool").unwrap().color.as_deref(),
             Some("goods_wool")
         );
-        assert_eq!(goods.get("wool").unwrap().default_market_price, 1.25);
+        assert_eq!(goods.get("wool").unwrap().default_market_price, Some(1.25));
         assert_eq!(goods.get("wool").unwrap().transport_cost, None);
         assert_eq!(
             goods.get("porcelain").unwrap().color.as_deref(),
             Some("goods_porcelain")
         );
-        assert_eq!(goods.get("porcelain").unwrap().default_market_price, 3.0);
+        assert_eq!(
+            goods.get("porcelain").unwrap().default_market_price,
+            Some(3.0)
+        );
         assert_eq!(goods.get("porcelain").unwrap().transport_cost, Some(5.0));
     }
 

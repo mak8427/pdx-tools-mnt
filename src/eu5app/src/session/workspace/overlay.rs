@@ -253,41 +253,28 @@ impl<'bump> Eu5Workspace<'bump> {
             std::cmp::Reverse<LocationRgoData<'bump>>,
         > = std::collections::BinaryHeap::new();
 
-        // Iterate through all locations using the locations database
-        for location_entry in self.gamestate.locations.iter() {
-            let location = location_entry.location();
-            let owner = location.owner;
-
-            let Some(raw_material) = location.raw_material else {
-                continue; // Skip if no raw material
-            };
-
-            // Skip if no RGO level
-            if location.rgo_level <= 0.0 {
+        for ((idx, raw_material), rgo_level) in
+            crate::map_measurements::rgo_material_levels(&self.gamestate)
+        {
+            if rgo_level <= 0.0 {
                 continue;
             }
-
-            let location_id = location_entry.id();
-
-            // Update resource summary
+            let entry = self.gamestate.locations.index(idx);
             let summary = resource_summaries
                 .entry(raw_material)
                 .or_insert(ResourceSummary {
                     total_levels: 0.0,
                     location_count: 0,
                 });
-            summary.total_levels += location.rgo_level;
+            summary.total_levels += rgo_level;
             summary.location_count += 1;
-
-            // Maintain top 10 locations using min-heap
             let location_data = LocationRgoData {
-                idx: location_entry.idx(),
-                id: location_id.value(),
-                owner_id: owner,
+                idx,
+                id: entry.id().value(),
+                owner_id: entry.location().owner,
                 resource_name: raw_material,
-                rgo_level: location.rgo_level,
+                rgo_level,
             };
-
             if top_locations.len() < 10 {
                 top_locations.push(std::cmp::Reverse(location_data));
             } else if let Some(std::cmp::Reverse(smallest)) = top_locations.peek()

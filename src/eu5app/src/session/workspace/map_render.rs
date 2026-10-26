@@ -52,9 +52,12 @@ impl LocationValues for LiveValues<'_, '_> {
 
     fn metric(&self, idx: LocationIdx, metric: Metric) -> f64 {
         let workspace = self.workspace;
-        metric.of(&workspace.gamestate, self.location(idx), || {
-            workspace.get_location_building_levels()[idx]
-        })
+        metric.of(
+            &workspace.gamestate,
+            self.location(idx),
+            || workspace.get_location_building_levels()[idx],
+            || workspace.get_location_rgo_levels()[idx],
+        )
     }
 
     fn owner_color(&self, idx: LocationIdx) -> GpuColor {
@@ -137,6 +140,11 @@ impl<'bump> Eu5Workspace<'bump> {
             terrain: &self.location_terrain,
             fill: &self.fill_components,
         }
+    }
+
+    pub(super) fn get_location_rgo_levels(&self) -> &LocationIndexedVec<f64> {
+        self.location_rgo_levels
+            .get_or_init(|| crate::map_measurements::location_rgo_levels(&self.gamestate))
     }
 
     /// Lazily computes and caches building levels for all locations.

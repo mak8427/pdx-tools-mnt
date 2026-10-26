@@ -235,6 +235,7 @@ pub(crate) struct InsightContext<'a, 'bump> {
     current_map_mode: MapMode,
     game_data: &'a GameData,
     building_levels: &'a OnceLock<LocationIndexedVec<f64>>,
+    rgo_levels: &'a OnceLock<LocationIndexedVec<f64>>,
 }
 impl<'a, 'bump> InsightContext<'a, 'bump> {
     pub(crate) fn new(
@@ -243,6 +244,7 @@ impl<'a, 'bump> InsightContext<'a, 'bump> {
         current_map_mode: MapMode,
         game_data: &'a GameData,
         building_levels: &'a OnceLock<LocationIndexedVec<f64>>,
+        rgo_levels: &'a OnceLock<LocationIndexedVec<f64>>,
     ) -> Self {
         Self {
             gamestate,
@@ -250,6 +252,7 @@ impl<'a, 'bump> InsightContext<'a, 'bump> {
             current_map_mode,
             game_data,
             building_levels,
+            rgo_levels,
         }
     }
     fn country_ref_from_country_idx(&self, country_idx: CountryIdx) -> CountryRefSource {
@@ -264,6 +267,10 @@ impl<'a, 'bump> InsightContext<'a, 'bump> {
             .countries
             .get(loc.owner.real_id()?.country_id())?;
         Some(CountryRefSource { country_idx })
+    }
+    fn get_location_rgo_levels(&self) -> &LocationIndexedVec<f64> {
+        self.rgo_levels
+            .get_or_init(|| crate::map_measurements::location_rgo_levels(self.gamestate))
     }
     fn get_location_building_levels(&self) -> &LocationIndexedVec<f64> {
         self.building_levels
@@ -523,7 +530,7 @@ impl<'a, 'bump> InsightContext<'a, 'bump> {
             let value = match self.current_map_mode {
                 MapMode::Control => loc.control,
                 MapMode::Population => self.gamestate.location_population(loc),
-                MapMode::RgoLevel => loc.rgo_level,
+                MapMode::RgoLevel => self.get_location_rgo_levels()[idx],
                 MapMode::BuildingLevels => self.get_location_building_levels()[idx],
                 MapMode::Wealth | MapMode::Markets => loc.possible_tax,
                 MapMode::UnrealizedTaxBase => loc.possible_tax - loc.tax,
@@ -1000,7 +1007,7 @@ impl<'a, 'bump> InsightContext<'a, 'bump> {
         let mut scoped_location_count = 0u32;
         let mut market_access_sum = 0.0f64;
         let mut market_access_count = 0u32;
-        let mut production_candidates: Vec<(LocationIdx, &eu5save::models::Location)> = Vec::new();
+        let mut production_candidates = Vec::new();
         let mut producing_location_counts: FxHashMap<GoodName, u32> = FxHashMap::default();
 
         for entry in self.gamestate.locations.iter() {
@@ -1023,11 +1030,17 @@ impl<'a, 'bump> InsightContext<'a, 'bump> {
             {
                 market_aggs[market_i].member_locations.push((idx, loc));
             }
-
-            if let Some(rm) = loc.raw_material {
-                *producing_location_counts.entry(rm).or_insert(0) += 1;
-                production_candidates.push((idx, loc));
+        }
+        for ((idx, good), level) in crate::map_measurements::rgo_material_levels(self.gamestate) {
+            if !in_scope(idx) {
+                continue;
             }
+            let loc = self.gamestate.locations.index(idx).location();
+            if loc.owner.is_dummy() {
+                continue;
+            }
+            *producing_location_counts.entry(good).or_insert(0) += 1;
+            production_candidates.push((idx, loc, good, level));
         }
 
         for (name, count) in &producing_location_counts {
@@ -1126,11 +1139,8 @@ impl<'a, 'bump> InsightContext<'a, 'bump> {
         };
 
         let mut production_rows: Vec<ProductionLocationSummary<'_>> = Vec::new();
-        for (idx, loc) in production_candidates {
+        for (idx, loc, raw_material, rgo_level) in production_candidates {
             let Some(owner) = self.owner_country_ref_for_location(loc) else {
-                continue;
-            };
-            let Some(raw_material) = loc.raw_material else {
                 continue;
             };
             let (market_id_opt, center_location_idx_opt) = if let Some(market_id) = loc.market
@@ -1150,14 +1160,14 @@ impl<'a, 'bump> InsightContext<'a, 'bump> {
                 })
                 .unwrap_or((0.0, 0.0));
 
-            let opportunity = loc.rgo_level.max(0.0) * loc.market_access.max(0.0) * shortage_value;
+            let opportunity = rgo_level.max(0.0) * loc.market_access.max(0.0) * shortage_value;
 
             production_rows.push(ProductionLocationSummary {
                 location: idx,
                 owner,
                 market: market_id_opt.map(|market_id| MarketRefSource { market_id }),
                 raw_material: Some(raw_material),
-                rgo_level: loc.rgo_level,
+                rgo_level,
                 market_access: loc.market_access,
                 development: loc.development,
                 population: self.gamestate.location_population(loc) as u32,
@@ -1958,6 +1968,7 @@ impl<'a, 'bump> InsightContext<'a, 'bump> {
                     kind,
                     BuildingTypeSummary {
                         building: BuildingKeyRef(kind),
+                        category: crate::presentation::BuildingCategoryRef(kind),
                         levels: t.levels,
                         foreign_levels: t.foreign_levels,
                         employed: t.employed,
@@ -2198,35 +2209,33 @@ impl<'a, 'bump> InsightContext<'a, 'bump> {
         let mut scoped_levels: Vec<f64> = Vec::new();
         let mut scoped_locs: Vec<LocEntry<'_>> = Vec::new();
 
+        let material_levels = crate::map_measurements::rgo_material_levels(self.gamestate);
         for entry in self.gamestate.locations.iter() {
-            let loc = entry.location();
-            let Some(raw_material) = loc.raw_material else {
-                continue;
-            };
-            if loc.rgo_level <= 0.0 {
+            let idx = entry.idx();
+            let level = self.get_location_rgo_levels()[idx];
+            if level > 0.0 && (is_selection_empty || self.selection_state.contains(idx)) {
+                scoped_levels.push(level);
+            }
+        }
+        for ((idx, raw_material), rgo_level) in material_levels {
+            if rgo_level <= 0.0 {
                 continue;
             }
-
-            let idx = entry.idx();
+            let loc = self.gamestate.locations.index(idx).location();
             let in_scope = is_selection_empty || self.selection_state.contains(idx);
-
-            *global_mat_total.entry(raw_material).or_default() += loc.rgo_level;
-            global_total += loc.rgo_level;
-
+            *global_mat_total.entry(raw_material).or_default() += rgo_level;
+            global_total += rgo_level;
             if in_scope {
-                scoped_total += loc.rgo_level;
-                scoped_levels.push(loc.rgo_level);
-
+                scoped_total += rgo_level;
                 let mat = scoped_mat.entry(raw_material).or_default();
-                mat.total_rgo_level += loc.rgo_level;
+                mat.total_rgo_level += rgo_level;
                 mat.location_count += 1;
-                mat.levels.push(loc.rgo_level);
-
+                mat.levels.push(rgo_level);
                 if loc.owner.real_id().is_some() {
                     scoped_locs.push(LocEntry {
                         idx,
                         raw_material,
-                        rgo_level: loc.rgo_level,
+                        rgo_level,
                     });
                 }
             }
@@ -2611,8 +2620,15 @@ pub fn extract_overviews(
     let selection = SelectionState::new();
     let ctx = LocalizationContext::new(localization, data, game);
     let building_levels = OnceLock::new();
-    let mut analysis =
-        InsightContext::new(game, &selection, MapMode::Political, data, &building_levels);
+    let rgo_levels = OnceLock::new();
+    let mut analysis = InsightContext::new(
+        game,
+        &selection,
+        MapMode::Political,
+        data,
+        &building_levels,
+        &rgo_levels,
+    );
     let world = analysis.world_summary();
     analysis.current_map_mode = MapMode::Political;
     let political = analysis

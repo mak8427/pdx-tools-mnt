@@ -17,6 +17,11 @@ pub struct CompileArgs {
     #[clap(long)]
     minimal: bool,
 
+    /// EU5 mod root (containing in_game/ and main_menu/). Repeat in load order;
+    /// later mods override earlier files. Use a separate --output for mod assets.
+    #[clap(long = "mod", value_name = "DIRECTORY")]
+    mods: Vec<PathBuf>,
+
     /// Path to game source (directory or zip file). If not provided, attempts to auto-detect Steam installation
     #[clap(value_parser)]
     source_path: Option<PathBuf>,
@@ -39,6 +44,10 @@ impl CompileArgs {
         anyhow::ensure!(
             self.version.is_none() || self.source_path.is_some() || self.game.is_some(),
             "Use --game or a source path with --game-version"
+        );
+        anyhow::ensure!(
+            self.mods.is_empty() || self.output.is_some(),
+            "Use a separate --output directory when compiling mod assets"
         );
         let base_output = self
             .output
@@ -81,6 +90,10 @@ impl CompileArgs {
 
         // Process each game
         for (game, source_path) in games_to_process {
+            anyhow::ensure!(
+                self.mods.is_empty() || game == Game::Eu5,
+                "--mod is currently supported only for EU5"
+            );
             println!("\n=== Compiling {} ===\n", game);
 
             // Auto-detect source type and create appropriate provider
@@ -115,6 +128,7 @@ impl CompileArgs {
                 }
                 Game::Eu5 => {
                     let asset_compiler = Eu5AssetCompiler;
+                    let provider = crate::ModFileProvider::new(provider, &self.mods)?;
                     asset_compiler.compile_assets(&provider, &imaging, &base_output, &options)?
                 }
                 game => anyhow::bail!(

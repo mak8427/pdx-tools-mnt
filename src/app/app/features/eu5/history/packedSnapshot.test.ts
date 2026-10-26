@@ -78,6 +78,14 @@ describe("packed historical observations", () => {
       original.countries[0].population,
     );
   });
+  it("preserves trade quantities while reading older snapshots without them", () => {
+    const original = snapshot();
+    original.markets[0].totalTaken = 3.5;
+    const packed = packSnapshot(original);
+    expect(snapshotView(packed).markets[0].totalTaken).toBe(3.5);
+    const legacy = { ...packed, marketTraded: undefined };
+    expect(snapshotView(legacy).markets[0].totalTaken).toBeUndefined();
+  });
   it("exports the same public JSON schema and original values", async () => {
     const original = snapshot();
     const a = JSON.parse(await exportSnapshots([snapshotView(packSnapshot(original))]).text());

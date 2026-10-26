@@ -232,7 +232,7 @@ function goodTooltip(d: ScopedGoodSummary): string {
     `Supply: ${formatFloat(d.supply, 2)}`,
     `Demand: ${formatFloat(d.demand, 2)}`,
     `Total Taken: ${formatFloat(d.totalTaken, 2)}`,
-    `Price (weighted): ${formatFloat(d.weightedPrice, 2)}`,
+    `Price (weighted): ${d.totalTaken > 0 ? formatFloat(d.weightedPrice, 2) : "Unavailable"}`,
     `Shortage: ${formatFloat(d.shortage, 2)} ($${formatFloat(d.shortageValue, 0)})`,
     `Surplus: ${formatFloat(d.surplus, 2)} ($${formatFloat(d.surplusValue, 0)})`,
     `Balance Ratio: ${formatFloat(d.balanceRatio, 2)}`,
@@ -470,7 +470,11 @@ export function MarketGoodDetail({ good }: { good: ScopedGoodSummary }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatItem boxed label="Price" value={formatFloat(good.weightedPrice, 2)} />
+        <StatItem
+          boxed
+          label="Price"
+          value={good.totalTaken > 0 ? formatFloat(good.weightedPrice, 2) : "Unavailable"}
+        />
         <StatItem boxed label="Supply" value={formatFloat(good.supply, 2)} />
         <StatItem boxed label="Demand" value={formatFloat(good.demand, 2)} />
         <StatItem boxed label="Taken" value={formatFloat(good.totalTaken, 2)} />

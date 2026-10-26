@@ -1,3 +1,37 @@
+# PDX Tools for MEIOU and Taxes
+
+This derivative preserves the EU5 campaign analysis work from
+[`mak8427/pdx-tools`](https://github.com/mak8427/pdx-tools), starting at
+`f734d7a946fe04f22ff654cba93d66c95cbdc2ef`. Original project:
+[PDX Tools](https://github.com/pdx-tools/pdx-tools). The original license and
+copyright notices are retained.
+
+## Compile M&T game data
+
+Use your installed EU5 game and the same M&T version as the save. Mod folders
+are read locally; game assets and saves are not included in this repository.
+
+```sh
+cargo run -p pdx-assets -- compile "/path/to/Europa Universalis V" \
+  --game eu5 --game-version 1.4 \
+  --mod "/path/to/mod/MnT-EU5" --output assets/game
+```
+
+`--mod` expects the mod root containing `in_game/` and/or `main_menu/`.
+Repeat it in playset order; later mods override earlier files. Use a separate
+checkout/output from vanilla. Compilation reads vanilla plus mod definitions,
+including `REPLACE:`/`INJECT:` goods, building names, extra colors, icons and
+English localization. Unsupported `replace_paths` configurations fail explicitly.
+
+The resulting `eu5/1.4/game.zip`, `map.zip` and `loc-en.zip` bundles feed the
+existing EU5 viewer. Follow the contributor setup below to build the viewer;
+keep tokens, compiled assets and private saves local.
+
+RGO totals and material breakdowns use M&T RGO building levels when present.
+This does not add M&T-specific credit or estate charts.
+
+---
+
 <h1 align="center">
 <a href="https://pdx.tools">PDX Tools</a>
   <br/>

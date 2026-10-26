@@ -11,6 +11,11 @@ pub struct FsFile {
 }
 
 pub trait FileProvider: Send + Sync {
+    /// English localization files supplied by mods, in load order.
+    fn localization_overrides(&self) -> Result<Vec<String>> {
+        Ok(Vec::new())
+    }
+
     fn read_file(&self, path: &str) -> Result<Vec<u8>>;
     fn read_to_string(&self, path: &str) -> Result<String>;
     fn file_exists(&self, path: &str) -> bool;
@@ -269,6 +274,10 @@ impl<P> FileProvider for Box<P>
 where
     P: FileProvider + ?Sized,
 {
+    fn localization_overrides(&self) -> Result<Vec<String>> {
+        self.as_ref().localization_overrides()
+    }
+
     fn read_file(&self, path: &str) -> Result<Vec<u8>> {
         self.as_ref().read_file(path)
     }
@@ -298,6 +307,10 @@ impl<P> FileProvider for &P
 where
     P: FileProvider + ?Sized,
 {
+    fn localization_overrides(&self) -> Result<Vec<String>> {
+        (*self).localization_overrides()
+    }
+
     fn read_file(&self, path: &str) -> Result<Vec<u8>> {
         (*self).read_file(path)
     }

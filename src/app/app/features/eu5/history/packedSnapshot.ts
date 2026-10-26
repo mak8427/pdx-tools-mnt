@@ -33,6 +33,7 @@ export type PackedSnapshot = Omit<Snapshot, "countries" | "markets"> & {
   marketValues: Float64Array<ArrayBuffer>;
   marketIds: Uint32Array<ArrayBuffer>;
   marketMetadata: Uint32Array<ArrayBuffer>;
+  marketTraded?: Float64Array<ArrayBuffer>;
 };
 /** Charts keep f64 values; only dictionary IDs and offsets use integer columns. */
 export function packSnapshot(snapshot: Snapshot): PackedSnapshot {
@@ -72,6 +73,7 @@ export function packSnapshot(snapshot: Snapshot): PackedSnapshot {
     countryOffsets.set([centers.length, (country.marketCenters ?? []).length], index * 8 + 6);
     centers.push(...(country.marketCenters ?? []));
   });
+  const marketTraded = new Float64Array(markets.length);
   const marketValues = new Float64Array(markets.length * 4),
     marketIds = new Uint32Array(markets.length * 2);
   const marketIndex = new Map<number, number>(),
@@ -88,6 +90,7 @@ export function packSnapshot(snapshot: Snapshot): PackedSnapshot {
       );
     }
     marketIds.set([slot, intern(market.good)], index * 2);
+    marketTraded[index] = market.totalTaken ?? NaN;
     marketFields.forEach((field, column) => {
       marketValues[index * 4 + column] = market[field] ?? NaN;
     });
@@ -102,6 +105,7 @@ export function packSnapshot(snapshot: Snapshot): PackedSnapshot {
     breakdownValues: Float64Array.from(values),
     countryMarkets: Uint32Array.from(centers),
     marketValues,
+    marketTraded,
     marketIds,
     marketMetadata: Uint32Array.from(marketMetadata),
   };
@@ -147,6 +151,8 @@ function validatePackedSnapshot(p: PackedSnapshot) {
     p.countryValues.length !== n * numericFields.length ||
     p.countryOffsets.length !== n * 8 ||
     p.marketValues.length !== m * 4 ||
+    (p.marketTraded != null &&
+      (!(p.marketTraded instanceof Float64Array) || p.marketTraded.length !== m)) ||
     p.breakdownKeys.length !== p.breakdownValues.length ||
     p.marketMetadata.length % 3 !== 0
   )
@@ -213,6 +219,8 @@ export function marketAt(p: PackedSnapshot, index: number): Market {
     const value = p.marketValues[index * 4 + column];
     market[field] = Number.isNaN(value) ? undefined : value;
   });
+  const traded = p.marketTraded?.[index];
+  if (traded != null && !Number.isNaN(traded)) market.totalTaken = traded;
   return market;
 }
 export function snapshotMetadata(p: PackedSnapshot): Omit<Snapshot, "countries" | "markets"> {
@@ -225,6 +233,7 @@ export function snapshotMetadata(p: PackedSnapshot): Omit<Snapshot, "countries" 
     breakdownValues: _bv,
     countryMarkets: _cm,
     marketValues: _mv,
+    marketTraded: _mt,
     marketIds: _mi,
     marketMetadata: _mm,
     ...metadata

@@ -771,25 +771,21 @@ impl<'bump> Eu5Workspace<'bump> {
         market_id: eu5save::models::MarketId,
     ) -> Vec<MarketProductionLocationSummary<'_>> {
         let mut production_rows = Vec::new();
-        for entry in self.gamestate.locations.iter() {
-            let idx = entry.idx();
-            let loc = entry.location();
+        for ((idx, raw_material), rgo_level) in
+            crate::map_measurements::rgo_material_levels(&self.gamestate)
+        {
+            let loc = self.gamestate.locations.index(idx).location();
             if loc.owner.is_dummy() || loc.market != Some(market_id) {
                 continue;
             }
-
-            let Some(raw_material) = loc.raw_material else {
-                continue;
-            };
             let Some(owner) = self.owner_country_ref_for_location(loc) else {
                 continue;
             };
-
             production_rows.push(MarketProductionLocationSummary {
                 location: idx,
                 owner,
                 raw_material: Some(raw_material),
-                rgo_level: loc.rgo_level,
+                rgo_level,
                 market_access: loc.market_access,
                 development: loc.development,
                 population: self.gamestate.location_population(loc) as u32,
@@ -1029,6 +1025,12 @@ impl<'bump> Eu5Workspace<'bump> {
             .map(|b| BuildingEntry {
                 building_key: b.kind.to_str().to_string(),
                 level: b.level,
+                employed: b.employed * 1000.0,
+                production_methods: b
+                    .production_methods
+                    .iter()
+                    .map(|pm| pm.to_str().to_owned())
+                    .collect(),
             })
             .collect();
 
@@ -1088,7 +1090,7 @@ impl<'bump> Eu5Workspace<'bump> {
                 raw_material,
                 tax_base: loc.tax,
                 wealth: loc.possible_tax,
-                rgo_level: loc.rgo_level,
+                rgo_level: self.get_location_rgo_levels()[idx],
                 market_access: loc.market_access,
             },
             buildings,

@@ -65,7 +65,7 @@ impl<'bump> Eu5Workspace<'bump> {
                 access: location.market_access,
             },
             MapMode::RgoLevel => HoverStatSource::RgoLevel {
-                value: location.rgo_level,
+                value: self.get_location_rgo_levels()[location_idx],
             },
             MapMode::BuildingLevels => HoverStatSource::BuildingLevels {
                 value: self.get_location_building_levels()[location_idx],
@@ -198,7 +198,7 @@ impl<'bump> Eu5Workspace<'bump> {
                 for entry in self.gamestate().locations.iter() {
                     let location = entry.location();
                     if location.owner == owner_id {
-                        total += location.rgo_level;
+                        total += self.get_location_rgo_levels()[entry.idx()];
                     }
                 }
 

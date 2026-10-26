@@ -54,12 +54,13 @@ impl Metric {
         game: &Gamestate<'_>,
         location: &Location,
         building_levels: impl FnOnce() -> f64,
+        rgo_level: impl FnOnce() -> f64,
     ) -> f64 {
         match self {
             Metric::Development => location.development,
             Metric::Population => game.location_population(location),
             Metric::BuildingLevels => building_levels(),
-            Metric::RgoLevel => location.rgo_level,
+            Metric::RgoLevel => rgo_level(),
             Metric::Wealth => location.possible_tax,
             Metric::UnrealizedTaxBase => (location.possible_tax - location.tax).max(0.0),
             Metric::PopulationGrowth => {
@@ -285,6 +286,7 @@ pub fn extract(game: &Gamestate<'_>) -> Result<MapProjection, MapProjectionError
         .packed()
     };
     let buildings = crate::map_measurements::location_building_levels(game);
+    let rgos = crate::map_measurements::location_rgo_levels(game);
     let mut countries = BTreeMap::new();
     let mut religion_colors = BTreeMap::new();
     let mut market_colors = BTreeMap::new();
@@ -325,7 +327,12 @@ pub fn extract(game: &Gamestate<'_>) -> Result<MapProjection, MapProjectionError
             .fractions
             .extend(Fraction::ALL.map(|fraction| quantize(fraction.of(location))));
         for metric in Metric::ALL {
-            let value = metric.of(game, location, || buildings[entry.idx()]);
+            let value = metric.of(
+                game,
+                location,
+                || buildings[entry.idx()],
+                || rgos[entry.idx()],
+            );
             result.metrics.push(compact(value, entry.id().value())?);
         }
         for (id, values) in [

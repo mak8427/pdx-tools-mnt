@@ -14,6 +14,8 @@ pub struct MarketObservation {
     pub supply: Option<f64>,
     pub demand: Option<f64>,
     pub stockpile: Option<f64>,
+    #[cfg_attr(feature = "tsify", tsify(optional))]
+    pub total_taken: Option<f64>,
 }
 
 #[derive(Debug, Default, Serialize)]
@@ -97,6 +99,7 @@ pub fn extract(game: &Gamestate<'_>) -> SaveSnapshot {
                 supply: finite(good.supply),
                 demand: finite(good.demand),
                 stockpile: finite(good.stockpile),
+                total_taken: finite(good.total_taken),
             })
         })
         .collect();
@@ -106,6 +109,12 @@ pub fn extract(game: &Gamestate<'_>) -> SaveSnapshot {
         .iter_with_id()
         .map(|(id, market)| (id.value(), market.center.value()))
         .collect();
+    let rgo_levels = crate::map_measurements::location_rgo_levels(game);
+    let uses_mnt_rgos = game
+        .building_manager
+        .database
+        .iter()
+        .any(|b| crate::map_measurements::rgo_good(b.kind.to_str()).is_some());
     let mut totals = BTreeMap::<u32, CountryObservation>::new();
     for entry in game.locations.iter() {
         let location = entry.location();
@@ -151,9 +160,9 @@ pub fn extract(game: &Gamestate<'_>) -> SaveSnapshot {
         ) {
             total.urban_population += pop;
         }
-        let levels = finite(location.rgo_level).unwrap_or(0.0);
+        let levels = finite(rgo_levels[entry.idx()]).unwrap_or(0.0);
         total.rgo_levels += levels;
-        if let Some(material) = location.raw_material {
+        if !uses_mnt_rgos && let Some(material) = location.raw_material {
             add_named(&mut total.materials, material.to_str(), levels);
         }
         if let Some(&center) = location
@@ -188,6 +197,9 @@ pub fn extract(game: &Gamestate<'_>) -> SaveSnapshot {
             total.building_levels += levels;
             total.building_employment += finite(building.employed * 1000.0).unwrap_or(0.0);
             add_named(&mut total.buildings, building.kind.to_str(), levels);
+            if let Some(good) = crate::map_measurements::rgo_good(building.kind.to_str()) {
+                add_named(&mut total.materials, good, levels);
+            }
         }
     }
     let population = totals.values().map(|x| x.population).sum();

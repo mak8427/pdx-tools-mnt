@@ -773,6 +773,18 @@ impl Present for BuildingKeyRef<'_> {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct BuildingCategoryRef<'a>(pub &'a str);
+
+impl Present for BuildingCategoryRef<'_> {
+    type Output = Option<String>;
+    fn present(self, ctx: &LocalizationContext<'_, '_>) -> Self::Output {
+        ctx.localization
+            .get(&format!("__mnt_building_category__{}", self.0))
+            .map(str::to_owned)
+    }
+}
+
 impl<T> Present for Vec<T>
 where
     T: Present,

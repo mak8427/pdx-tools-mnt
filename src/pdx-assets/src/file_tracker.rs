@@ -12,6 +12,10 @@ pub struct FileAccessTracker<P: FileProvider> {
 }
 
 impl<P: FileProvider> FileProvider for FileAccessTracker<P> {
+    fn localization_overrides(&self) -> Result<Vec<String>> {
+        self.provider.localization_overrides()
+    }
+
     fn read_file(&self, path: &str) -> Result<Vec<u8>> {
         self.track_access(path);
         self.provider.read_file(path)

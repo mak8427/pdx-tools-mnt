@@ -286,6 +286,9 @@ pub struct MarketRef {
 pub struct BuildingEntry {
     pub building: Localized<String>,
     pub level: f64,
+    pub employed: f64,
+    pub production_methods: Vec<Localized<String>>,
+    pub rgo_good: Option<Localized<String>>,
 }
 
 #[derive(Debug, Clone)]
@@ -380,6 +383,8 @@ present_dto! {
 pub(crate) struct BuildingEntrySource {
     pub building_key: String,
     pub level: f64,
+    pub employed: f64,
+    pub production_methods: Vec<String>,
 }
 
 impl Present for BuildingEntrySource {
@@ -389,6 +394,23 @@ impl Present for BuildingEntrySource {
         BuildingEntry {
             building: crate::presentation::BuildingKeyRef(&self.building_key).present(ctx),
             level: self.level,
+            employed: self.employed,
+            production_methods: self
+                .production_methods
+                .iter()
+                .map(|key| {
+                    Localized::new(
+                        key.clone(),
+                        ctx.localization.get(key).unwrap_or(key).to_owned(),
+                    )
+                })
+                .collect(),
+            rgo_good: crate::map_measurements::rgo_good(&self.building_key).map(|key| {
+                Localized::new(
+                    key.to_owned(),
+                    ctx.localization.get(key).unwrap_or(key).to_owned(),
+                )
+            }),
         }
     }
 }

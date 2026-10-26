@@ -75,6 +75,7 @@ pub struct Eu5Workspace<'bump> {
     overlord_of: CountryIndexedVecOwned<Option<CountryIdx>>,
     location_terrain: LocationIndexedVec<Terrain>,
     location_building_levels: OnceLock<LocationIndexedVec<f64>>,
+    location_rgo_levels: OnceLock<LocationIndexedVec<f64>>,
     fill_components: terrain_fill::FillComponents,
     /// The political fill of surrounded terrain on the timeline date: the
     /// location whose color each lake or impassable location shows.
@@ -276,6 +277,7 @@ impl<'bump> Eu5Workspace<'bump> {
             overlord_of,
             location_terrain,
             location_building_levels: OnceLock::new(),
+            location_rgo_levels: OnceLock::new(),
             fill_components,
             fill_donors,
             religion_fill_donors: OnceLock::new(),

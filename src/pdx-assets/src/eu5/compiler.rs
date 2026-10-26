@@ -28,6 +28,14 @@ impl<P> GameFileSource for FileProviderAdapter<P>
 where
     P: FileProvider,
 {
+    fn localization_overrides(
+        &self,
+    ) -> std::result::Result<Vec<String>, eu5app::game_data::GameDataError> {
+        self.0
+            .localization_overrides()
+            .map_err(|e| map_provider_error(e, "mod localization"))
+    }
+
     fn open_file<'a>(
         &'a self,
         path: &str,
