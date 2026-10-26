@@ -1,3 +1,4 @@
+import { GoodSelect } from "../../../components/GoodSelect";
 import { AnimatedValue } from "../../../components/AnimatedValue";
 import { chartInk } from "@/components/viz/echartsTheme";
 import { useMemo, useState, useRef, useLayoutEffect } from "react";
@@ -316,18 +317,13 @@ export function MarketGoodsTabContent({ marketId }: { marketId: number }) {
         <section className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <SectionTitle className="mb-0">Selected good diagnostic</SectionTitle>
-            <select
+            <GoodSelect
               value={selectedGood.good.key}
-              onChange={(event) => setSelectedGoodKey(event.target.value)}
-              className="rounded-control border border-game-line bg-game-panel-hover px-2 py-1 text-xs font-semibold text-game-ink-100"
-              aria-label="Selected market good"
-            >
-              {sortedGoods.map((good) => (
-                <option key={good.good.key} value={good.good.key}>
-                  {good.good.name}
-                </option>
-              ))}
-            </select>
+              onValueChange={setSelectedGoodKey}
+              goods={sortedGoods.map(({ good }) => ({ key: good.key, name: good.name }))}
+              label="Selected market good"
+              className="max-w-64"
+            />
           </div>
           <MarketGoodDetail good={selectedGood} />
         </section>

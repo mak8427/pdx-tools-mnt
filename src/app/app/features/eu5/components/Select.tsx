@@ -108,7 +108,7 @@ const GameSelectItem = React.forwardRef<
     <SelectPrimitive.Item
       ref={ref}
       className={cx(
-        "relative flex h-7 cursor-default items-center gap-1.5 rounded-plate px-2.5 pr-7",
+        "relative flex h-7 shrink-0 cursor-default items-center gap-1.5 rounded-plate px-2.5 pr-7",
         "font-game-ui text-[12.5px] text-game-ink-300 outline-none select-none",
         "data-highlighted:bg-game-panel-hover data-highlighted:text-game-ink-100",
         "data-disabled:pointer-events-none data-disabled:opacity-40",
