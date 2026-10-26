@@ -1,0 +1,66 @@
+name: GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      CARGO_INCREMENTAL: 0
+      CARGO_BUILD_JOBS: 2
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v4
+        with:
+          version: 2026.9.17
+          cache: false
+          install_args: node rust github:pnpm/pnpm github:google/flatbuffers github:rustwasm/wasm-bindgen
+      - uses: Swatinem/rust-cache@v2
+      - name: Download the M&T viewer assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download mnt-pages-assets-v1 --repo "$GITHUB_REPOSITORY" --pattern mnt-pages-assets-v1.tar.gz --dir "$RUNNER_TEMP"
+          echo "20cd9bff66ca4441073ef9425d08f6302bf049345ce0286f753918d85b37a326  $RUNNER_TEMP/mnt-pages-assets-v1.tar.gz" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/mnt-pages-assets-v1.tar.gz"
+          # Shared campaign code includes the unused EU4 worker in the bundle.
+          touch assets/tokens/eu4.bin
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Compile browser analysis modules
+        run: |
+          rustup target add wasm32-unknown-unknown
+          cargo build --locked --profile wasm-dev --target wasm32-unknown-unknown --no-default-features --features zstd_rust -p wasm-eu5 -p wasm-eu5-map -p wasm-eu5-diagnostics -p wasm-eu4 -p wasm-compress
+          for module in wasm_eu5 wasm_eu5_map wasm_eu5_diagnostics wasm_eu4 wasm_compress; do
+            wasm-bindgen --target web "target/wasm32-unknown-unknown/wasm-dev/$module.wasm" --out-dir src/app/app/wasm
+          done
+      - name: Build the static viewer
+        working-directory: src/app
+        run: pnpm run build:pages
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: src/app/dist-pages
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish
+        id: deployment
+        uses: actions/deploy-pages@v4

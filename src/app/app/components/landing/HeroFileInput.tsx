@@ -107,7 +107,9 @@ export const HeroFileInput = () => {
       : "bg-black/10 text-blue-200 outline-blue-500",
   );
 
-  const acceptedFiles: `.${string}`[] = [".eu4", ".eu5", ".ck3", ".hoi4", ".rome", ".v3"];
+  const acceptedFiles: `.${string}`[] = import.meta.env.VITE_STATIC_VIEWER
+    ? [".eu5"]
+    : [".eu4", ".eu5", ".ck3", ".hoi4", ".rome", ".v3"];
 
   const children = (
     <>

@@ -34,6 +34,15 @@ export const SessionProvider = ({ children }: SessionProviderProps) => {
   );
 };
 
+/** The static viewer analyzes local saves without an account server. */
+export const LocalSessionProvider = ({ children }: SessionProviderProps) => (
+  <SessionContext.Provider
+    value={{ isDeveloper: true, profile: { roles: ["guest"], features: [] } }}
+  >
+    {children}
+  </SessionContext.Provider>
+);
+
 export const useSession = () => check(useContext(SessionContext).profile);
 
 export const useIsDeveloper = () => useContext(SessionContext).isDeveloper;
