@@ -13,6 +13,28 @@ use pdx_map::{GpuColor, GpuLocationIdx, LocationArrays};
 /// the map.
 const REPRODUCTION_PERCENTILE: f64 = 0.95;
 
+const NO_CENTER_COLOR: GpuColor = GpuColor::from_rgb(65, 69, 75);
+
+// The map renderer has two stripe colors. Show the two highest tiers; stable
+// sorting keeps Trade, Production, Culture, Education as the tie order.
+fn ranked_centers(
+    mut centers: [(MapMode, u8); 4],
+) -> Option<((MapMode, u8), Option<(MapMode, u8)>)> {
+    centers.sort_by_key(|(_, level)| std::cmp::Reverse(*level));
+    (centers[0].1 > 0).then(|| (centers[0], (centers[1].1 > 0).then_some(centers[1])))
+}
+
+fn center_color(kind: MapMode, level: u8) -> GpuColor {
+    let color = match kind {
+        MapMode::CenterTrade => GpuColor::from_rgb(69, 151, 214),
+        MapMode::CenterProduction => GpuColor::from_rgb(67, 176, 113),
+        MapMode::CenterCulture => GpuColor::from_rgb(232, 172, 57),
+        MapMode::CenterEducation => GpuColor::from_rgb(204, 92, 170),
+        _ => GpuColor::DEBUG,
+    };
+    GpuColor::from_rgb(12, 15, 20).blend(color, [0.0, 0.35, 0.55, 0.78, 1.0][level.min(4) as usize])
+}
+
 /// The market of a location.
 pub(crate) enum LocationMarket {
     None,
@@ -27,20 +49,15 @@ pub(crate) enum LocationMarket {
 /// The values of each location on one date. Identities are only compared,
 /// so their numbers have no other meaning.
 pub(crate) trait LocationValues {
-    fn strongest_center(&self, idx: LocationIdx) -> Option<(MapMode, u8)> {
-        [
-            MapMode::CenterEducation,
-            MapMode::CenterCulture,
-            MapMode::CenterProduction,
+    fn center_pair(&self, idx: LocationIdx) -> Option<((MapMode, u8), Option<(MapMode, u8)>)> {
+        let centers = [
             MapMode::CenterTrade,
+            MapMode::CenterProduction,
+            MapMode::CenterCulture,
+            MapMode::CenterEducation,
         ]
-        .into_iter()
-        .filter_map(|mode| {
-            self.center_level(idx, mode)
-                .filter(|level| *level > 0)
-                .map(|level| (mode, level))
-        })
-        .max_by_key(|(_, level)| *level)
+        .map(|mode| (mode, self.center_level(idx, mode).unwrap_or(0)));
+        ranked_centers(centers)
     }
     /// Center tier at this save date; historical projections may lack it.
     fn center_level(&self, _idx: LocationIdx, _mode: MapMode) -> Option<u8> {
@@ -366,37 +383,40 @@ pub(crate) fn paint(
         | MapMode::CenterProduction
         | MapMode::CenterCulture
         | MapMode::CenterEducation) => {
-            let primary = locations
-                .map(|idx| {
-                    terrain_color(layout, idx).unwrap_or_else(|| {
-                        let center = if mode == MapMode::CenterOverview {
-                            values.strongest_center(idx)
-                        } else {
-                            values
-                                .center_level(idx, mode)
-                                .filter(|level| *level > 0)
-                                .map(|level| (mode, level))
-                        };
-                        center.map_or(GpuColor::from_rgb(65, 69, 75), |(kind, level)| {
-                            let color = match kind {
-                                MapMode::CenterTrade => GpuColor::from_rgb(69, 151, 214),
-                                MapMode::CenterProduction => GpuColor::from_rgb(67, 176, 113),
-                                MapMode::CenterCulture => GpuColor::from_rgb(232, 172, 57),
-                                MapMode::CenterEducation => GpuColor::from_rgb(204, 92, 170),
-                                _ => GpuColor::DEBUG,
-                            };
-                            GpuColor::from_rgb(12, 15, 20)
-                                .blend(color, [0.0, 0.35, 0.55, 0.78, 1.0][level.min(4) as usize])
-                        })
-                    })
-                })
-                .collect();
+            let mut primary = Vec::with_capacity(count);
+            let mut secondary = Vec::with_capacity(count);
+            for idx in locations {
+                let (first, second) = if let Some(terrain) = terrain_color(layout, idx) {
+                    (terrain, terrain)
+                } else if mode == MapMode::CenterOverview {
+                    match values.center_pair(idx) {
+                        Some((first, second)) => {
+                            let first_color = center_color(first.0, first.1);
+                            (
+                                first_color,
+                                second
+                                    .map_or(first_color, |(kind, level)| center_color(kind, level)),
+                            )
+                        }
+                        None => (NO_CENTER_COLOR, NO_CENTER_COLOR),
+                    }
+                } else {
+                    let color = values
+                        .center_level(idx, mode)
+                        .filter(|level| *level > 0)
+                        .map_or(NO_CENTER_COLOR, |level| center_color(mode, level));
+                    (color, color)
+                };
+                primary.push(first);
+                secondary.push(second);
+            }
             PaintedMap {
                 primary,
-                secondary: None,
+                secondary: Some(secondary),
                 legend: MapLegend::Qualitative,
             }
         }
+
         mode => {
             let gradient = gradient(mode).expect("a quantitative map mode");
             let selection = request.selection;
@@ -447,5 +467,65 @@ pub(crate) fn paint(
                 )),
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod center_tests {
+    use super::*;
+
+    #[test]
+    fn overlapping_centers_keep_the_two_highest_tiers() {
+        let pair = ranked_centers([
+            (MapMode::CenterTrade, 1),
+            (MapMode::CenterProduction, 3),
+            (MapMode::CenterCulture, 4),
+            (MapMode::CenterEducation, 2),
+        ]);
+        assert_eq!(
+            pair,
+            Some((
+                (MapMode::CenterCulture, 4),
+                Some((MapMode::CenterProduction, 3))
+            ))
+        );
+        assert_ne!(
+            center_color(MapMode::CenterCulture, 4),
+            center_color(MapMode::CenterProduction, 3)
+        );
+    }
+
+    #[test]
+    fn equal_tiers_have_stable_type_order_and_missing_centers_do_not_stripe() {
+        assert_eq!(
+            ranked_centers([
+                (MapMode::CenterTrade, 2),
+                (MapMode::CenterProduction, 2),
+                (MapMode::CenterCulture, 2),
+                (MapMode::CenterEducation, 2)
+            ]),
+            Some((
+                (MapMode::CenterTrade, 2),
+                Some((MapMode::CenterProduction, 2))
+            ))
+        );
+        assert_eq!(
+            ranked_centers([
+                (MapMode::CenterTrade, 0),
+                (MapMode::CenterProduction, 0),
+                (MapMode::CenterCulture, 0),
+                (MapMode::CenterEducation, 1)
+            ]),
+            Some(((MapMode::CenterEducation, 1), None))
+        );
+        assert_eq!(
+            ranked_centers([
+                (MapMode::CenterTrade, 0),
+                (MapMode::CenterProduction, 0),
+                (MapMode::CenterCulture, 0),
+                (MapMode::CenterEducation, 0)
+            ]),
+            None
+        );
     }
 }
