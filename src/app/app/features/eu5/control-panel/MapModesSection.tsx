@@ -23,9 +23,11 @@ export function MapModesSection() {
         {MAP_MODES.map((mode) => (
           <ModeRow
             key={mode.value}
-            mode={mode.value === "centerOverview" && centerActive
-              ? { ...mode, value: currentMapMode }
-              : mode}
+            mode={
+              mode.value === "centerOverview" && centerActive
+                ? { ...mode, value: currentMapMode }
+                : mode
+            }
             live={live}
             locked={locked}
           />
@@ -33,12 +35,19 @@ export function MapModesSection() {
         {centerActive && (
           <label className="flex flex-col gap-1 px-3.5 py-2 text-xs text-game-ink-500">
             Center category
-            <GameSelect value={currentMapMode} disabled={locked}
-              onValueChange={(value) => engine.trigger.selectMapMode(value as MapMode)}>
-              <GameSelect.Trigger aria-label="Center category"><GameSelect.Value /></GameSelect.Trigger>
+            <GameSelect
+              value={currentMapMode}
+              disabled={locked}
+              onValueChange={(value) => engine.trigger.selectMapMode(value as MapMode)}
+            >
+              <GameSelect.Trigger aria-label="Center category">
+                <GameSelect.Value />
+              </GameSelect.Trigger>
               <GameSelect.Content>
                 {CENTER_MODES.map((mode) => (
-                  <GameSelect.Item key={mode.value} value={mode.value}>{mode.label}</GameSelect.Item>
+                  <GameSelect.Item key={mode.value} value={mode.value}>
+                    {mode.label}
+                  </GameSelect.Item>
                 ))}
               </GameSelect.Content>
             </GameSelect>

@@ -339,14 +339,13 @@ function CenterLegend() {
     <div className="p-4 text-sm text-game-ink-500">
       <p>Color shows the center type; brighter shades indicate higher levels.</p>
       <p className="mt-3">
-        Overlapping centers use diagonal stripes for the two highest levels. Each
-        stripe keeps its type’s color and level’s brightness. Ties use Trade,
-        Production, Culture, then Education. Hover to see every center, or select
-        a category to inspect it separately.
+        Overlapping centers use diagonal stripes for the two highest levels. Each stripe keeps its
+        type’s color and level’s brightness. Ties use Trade, Production, Culture, then Education.
+        Hover to see every center, or select a category to inspect it separately.
       </p>
       <p className="mt-3">
-        Center information is read from the save date. Imported historical
-        projections do not yet store center levels.
+        Center information is read from the save date. Imported historical projections do not yet
+        store center levels.
       </p>
     </div>
   );

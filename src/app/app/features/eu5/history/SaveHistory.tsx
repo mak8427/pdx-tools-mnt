@@ -359,12 +359,23 @@ export function SaveHistory({
                 {isMarket && (
                   <label className={styles.field}>
                     <span>Metric</span>
-                    <GameSelect value={metric} onValueChange={(value) => setMetric(value as Metric)}>
-                      <GameSelect.Trigger aria-label="Metric"><GameSelect.Value /></GameSelect.Trigger>
+                    <GameSelect
+                      value={metric}
+                      onValueChange={(value) => setMetric(value as Metric)}
+                    >
+                      <GameSelect.Trigger aria-label="Metric">
+                        <GameSelect.Value />
+                      </GameSelect.Trigger>
                       <GameSelect.Content>
                         {Object.entries(metricNames)
-                          .filter(([value]) => ["balance", "price", "supply", "demand", "stockpile"].includes(value))
-                          .map(([value, name]) => <GameSelect.Item key={value} value={value}>{name}</GameSelect.Item>)}
+                          .filter(([value]) =>
+                            ["balance", "price", "supply", "demand", "stockpile"].includes(value),
+                          )
+                          .map(([value, name]) => (
+                            <GameSelect.Item key={value} value={value}>
+                              {name}
+                            </GameSelect.Item>
+                          ))}
                       </GameSelect.Content>
                     </GameSelect>
                   </label>
@@ -373,38 +384,68 @@ export function SaveHistory({
                   <>
                     <label className={styles.field}>
                       <span>Good</span>
-                      <GoodSelect value={activeGood} onValueChange={setGood}
-                        goods={goods.map((key) => ({ key, name: human(key) }))} label="Good" />
+                      <GoodSelect
+                        value={activeGood}
+                        onValueChange={setGood}
+                        goods={goods.map((key) => ({ key, name: human(key) }))}
+                        label="Good"
+                      />
                     </label>
                     <fieldset className={styles.marketPicker}>
                       <legend>Market scope</legend>
                       <div className={styles.scopeHeading}>
-                        <span>{selectedMarkets.length ? `${selectedMarkets.length} selected` : "All markets"}</span>
-                        <button type="button" onClick={() => setMarkets([])} disabled={!selectedMarkets.length}>
+                        <span>
+                          {selectedMarkets.length
+                            ? `${selectedMarkets.length} selected`
+                            : "All markets"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setMarkets([])}
+                          disabled={!selectedMarkets.length}
+                        >
                           Reset
                         </button>
                       </div>
                       <div className={styles.searchField}>
                         <MagnifyingGlassIcon aria-hidden="true" />
-                        <input type="search" aria-label="Find markets" value={marketSearch}
-                          onChange={(event) => setMarketSearch(event.target.value)} placeholder="Search markets" />
+                        <input
+                          type="search"
+                          aria-label="Find markets"
+                          value={marketSearch}
+                          onChange={(event) => setMarketSearch(event.target.value)}
+                          placeholder="Search markets"
+                        />
                       </div>
                       <div className={styles.marketList} role="group" aria-label="Markets">
-                        {marketIds.filter((id) => labels[id].toLowerCase().includes(marketSearch.trim().toLowerCase()))
+                        {marketIds
+                          .filter((id) =>
+                            labels[id].toLowerCase().includes(marketSearch.trim().toLowerCase()),
+                          )
                           .map((id) => (
                             <label key={id} className={styles.marketOption}>
-                              <input type="checkbox" checked={selectedMarkets.includes(id)}
-                                onChange={() => setMarkets((previous) => previous.includes(id)
-                                  ? previous.filter((market) => market !== id) : [...previous, id])} />
+                              <input
+                                type="checkbox"
+                                checked={selectedMarkets.includes(id)}
+                                onChange={() =>
+                                  setMarkets((previous) =>
+                                    previous.includes(id)
+                                      ? previous.filter((market) => market !== id)
+                                      : [...previous, id],
+                                  )
+                                }
+                              />
                               <span>{labels[id]}</span>
                             </label>
                           ))}
-                        {!marketIds.some((id) => labels[id].toLowerCase().includes(marketSearch.trim().toLowerCase())) && (
-                          <p className={styles.noResults}>No markets match your search.</p>
-                        )}
+                        {!marketIds.some((id) =>
+                          labels[id].toLowerCase().includes(marketSearch.trim().toLowerCase()),
+                        ) && <p className={styles.noResults}>No markets match your search.</p>}
                       </div>
                       <p className={styles.scopeHint}>
-                        {selectedMarkets.length ? "Selected markets are combined in the chart." : "Select markets to narrow the chart, or leave all included."}
+                        {selectedMarkets.length
+                          ? "Selected markets are combined in the chart."
+                          : "Select markets to narrow the chart, or leave all included."}
                       </p>
                     </fieldset>
                   </>
@@ -412,7 +453,9 @@ export function SaveHistory({
                   <label className={styles.countryField}>
                     <span>Country</span>
                     <GameSelect value={activeCountry} onValueChange={setCountry}>
-                      <GameSelect.Trigger aria-label="Country"><GameSelect.Value /></GameSelect.Trigger>
+                      <GameSelect.Trigger aria-label="Country">
+                        <GameSelect.Value />
+                      </GameSelect.Trigger>
                       <GameSelect.Content className="max-h-72 overflow-y-auto">
                         <GameSelect.Item value="world">World · owned locations</GameSelect.Item>
                         {countryOptions}
@@ -424,8 +467,17 @@ export function SaveHistory({
                 )}
                 {isMarket && (
                   <label className={styles.checkbox}>
-                    <input type="checkbox" checked={indexed} onChange={(event) => setIndexed(event.target.checked)} />
-                    <span>Index first observation to 100<span className={styles.checkboxHint}>Compare relative change instead of absolute amounts.</span></span>
+                    <input
+                      type="checkbox"
+                      checked={indexed}
+                      onChange={(event) => setIndexed(event.target.checked)}
+                    />
+                    <span>
+                      Index first observation to 100
+                      <span className={styles.checkboxHint}>
+                        Compare relative change instead of absolute amounts.
+                      </span>
+                    </span>
                   </label>
                 )}
               </div>

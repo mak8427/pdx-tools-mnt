@@ -13,7 +13,13 @@ function GoodLabel({ good }: { good: GoodOption }) {
 }
 
 /** One goods picker for current-save diagnostics and campaign history. */
-export function GoodSelect({ value, onValueChange, goods, label, className }: {
+export function GoodSelect({
+  value,
+  onValueChange,
+  goods,
+  label,
+  className,
+}: {
   value: string | undefined;
   onValueChange: (value: string) => void;
   goods: readonly GoodOption[];

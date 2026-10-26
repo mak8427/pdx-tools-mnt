@@ -70,7 +70,10 @@ export function CountryProfile({ countryIdx }: { countryIdx: number }) {
         <GameTabs.Content value="diplomacy" className="min-h-0 flex-1 basis-0 overflow-y-auto">
           <DiplomacyTabContent data={profile.diplomacy} backLabel={profile.header.name} />
         </GameTabs.Content>
-        <GameTabs.Content value="estates" className="min-h-0 flex-1 basis-0 overflow-y-auto px-4 py-4">
+        <GameTabs.Content
+          value="estates"
+          className="min-h-0 flex-1 basis-0 overflow-y-auto px-4 py-4"
+        >
           <EstatesTab estates={profile.estates} />
         </GameTabs.Content>
       </GameTabs>

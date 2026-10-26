@@ -34,7 +34,9 @@ export function LocationOverviewTab({ profile }: Props) {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-game-ink-500">No center modifiers recorded for this location.</p>
+          <p className="text-sm text-game-ink-500">
+            No center modifiers recorded for this location.
+          </p>
         )}
       </div>
 

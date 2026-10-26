@@ -42,6 +42,11 @@ fn mode_name(mode: MapMode) -> &'static str {
         MapMode::Religion => "religion",
         MapMode::StateEfficacy => "state_efficacy",
         MapMode::PopulationGrowth => "population_growth",
+        MapMode::CenterOverview => "center_overview",
+        MapMode::CenterTrade => "center_trade",
+        MapMode::CenterProduction => "center_production",
+        MapMode::CenterCulture => "center_culture",
+        MapMode::CenterEducation => "center_education",
     }
 }
 
