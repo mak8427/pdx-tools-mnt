@@ -14,12 +14,12 @@ use pdx_map::{GpuColor, GpuLocationIdx, LocationArrays};
 const REPRODUCTION_PERCENTILE: f64 = 0.95;
 
 const NO_CENTER_COLOR: GpuColor = GpuColor::from_rgb(65, 69, 75);
+type Center = (MapMode, u8);
+type CenterPair = (Center, Option<Center>);
 
 // The map renderer has two stripe colors. Show the two highest tiers; stable
 // sorting keeps Trade, Production, Culture, Education as the tie order.
-fn ranked_centers(
-    mut centers: [(MapMode, u8); 4],
-) -> Option<((MapMode, u8), Option<(MapMode, u8)>)> {
+fn ranked_centers(mut centers: [Center; 4]) -> Option<CenterPair> {
     centers.sort_by_key(|(_, level)| std::cmp::Reverse(*level));
     (centers[0].1 > 0).then(|| (centers[0], (centers[1].1 > 0).then_some(centers[1])))
 }
@@ -49,7 +49,7 @@ pub(crate) enum LocationMarket {
 /// The values of each location on one date. Identities are only compared,
 /// so their numbers have no other meaning.
 pub(crate) trait LocationValues {
-    fn center_pair(&self, idx: LocationIdx) -> Option<((MapMode, u8), Option<(MapMode, u8)>)> {
+    fn center_pair(&self, idx: LocationIdx) -> Option<CenterPair> {
         let centers = [
             MapMode::CenterTrade,
             MapMode::CenterProduction,

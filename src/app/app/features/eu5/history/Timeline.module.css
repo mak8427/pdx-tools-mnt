@@ -36,69 +36,210 @@
 .panel,
 .chart,
 .empty {
-  background: var(--game-panel-2);
-  border: 1px solid var(--game-line);
+  background: var(--game-panel);
+  border: 1px solid var(--game-line-strong);
   border-radius: var(--radius-panel);
   padding: 14px;
 }
 .panel {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
 }
-.panel h2,
-.panel .help,
-.panel .checkbox {
-  grid-column: 1/-1;
+.filterHeading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--game-line);
+  background: var(--game-panel-2);
+}
+.filterHeading svg {
+  width: 15px;
+  height: 15px;
+  color: var(--game-ink-500);
+}
+.filterHeading > span {
+  margin-left: auto;
+  color: var(--game-ink-500);
+  font: 10px var(--font-game-num);
 }
 .panel h2,
 .chart h2,
 .empty h2 {
   font-size: 13px;
   font-weight: 600;
+  color: var(--game-ink-100);
+}
+.filterGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px;
+}
+.field,
+.countryField {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+.field > span,
+.countryField > span,
+.marketPicker legend {
+  color: var(--game-ink-500);
+  font: 10px var(--font-game-num);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.countryField,
+.marketPicker,
+.checkbox {
+  grid-column: 1 / -1;
+}
+.marketPicker {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.marketPicker legend {
+  margin-bottom: 8px;
+}
+.scopeHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 12px;
   color: var(--game-ink-300);
 }
-.panel label {
-  display: block;
-  font-size: 11px;
-  color: var(--game-ink-300);
+.searchField {
+  position: relative;
 }
-.panel input[type="search"],
-.panel select {
+.searchField svg {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 14px;
+  height: 14px;
+  color: var(--game-ink-500);
+  pointer-events: none;
+}
+.searchField input {
   display: block;
+  box-sizing: border-box;
   width: 100%;
-  margin-top: 6px;
-  background: var(--game-panel);
+  height: 34px;
   border: 1px solid var(--game-line-strong);
   border-radius: var(--radius-control);
-  padding: 6px;
+  padding: 6px 10px 6px 32px;
+  background: var(--game-page);
   color: var(--game-ink-100);
   font-size: 12px;
 }
-.panel select:focus-visible,
+.searchField input::placeholder {
+  color: var(--game-ink-500);
+}
+.marketList {
+  max-height: 176px;
+  overflow-y: auto;
+  margin-top: 6px;
+  border: 1px solid var(--game-line);
+  border-radius: var(--radius-control);
+  padding: 4px;
+  background: var(--game-page);
+  scrollbar-width: thin;
+  scrollbar-color: var(--game-ink-700) transparent;
+}
+.marketOption {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 30px;
+  border-radius: var(--radius-control);
+  padding: 4px 7px;
+  font-size: 12px;
+  color: var(--game-ink-300);
+  cursor: pointer;
+}
+.marketOption:hover,
+.marketOption:has(input:checked) {
+  background: var(--game-panel-hover);
+  color: var(--game-ink-100);
+}
+.marketOption span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.marketOption input,
+.checkbox input {
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  border: 1px solid var(--game-ink-rule);
+  border-radius: 2px;
+  background-color: var(--game-panel);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.marketOption input:checked,
+.checkbox input:checked {
+  border-color: var(--game-accent-300);
+  background-color: var(--game-accent-300);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m3 8 3 3 7-7' fill='none' stroke='%23161c22' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+.scopeHint,
+.noResults {
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--game-ink-500);
+}
+.noResults {
+  margin: 0;
+  padding: 10px;
+}
+.searchField input:focus-visible,
+.marketOption input:focus-visible,
+.checkbox input:focus-visible,
 .page button:focus-visible {
-  outline: 2px solid var(--game-accent-100);
+  outline: 2px solid var(--game-accent-300);
   outline-offset: 2px;
 }
-.panel select[multiple] {
-  padding: 3px;
-}
-.panel option {
-  padding: 3px;
-}
 .checkbox {
-  display: flex !important;
-  align-items: center;
-  gap: 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  border-top: 1px solid var(--game-line);
+  padding-top: 12px;
+  font-size: 12px;
+  color: var(--game-ink-300);
+  cursor: pointer;
 }
 .checkbox input {
-  accent-color: var(--game-accent-100);
+  margin-top: 2px;
+}
+.checkboxHint {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--game-ink-500);
 }
 .help {
   font-size: 11px;
   line-height: 1.6;
   color: var(--game-ink-500);
-  margin-top: 8px;
+}
+.panel > .help {
+  margin: 0;
+  border-top: 1px solid var(--game-line);
+  padding: 10px 14px;
+}
+.filterGrid > .help {
+  grid-column: 1 / -1;
 }
 .main {
   min-width: 0;
@@ -115,7 +256,12 @@
 .chartHeading h2 {
   margin-top: 4px;
 }
-.page button {
+.goodHeading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.page button:not([role="combobox"]) {
   border: 1px solid var(--game-line);
   border-radius: var(--radius-control);
   padding: 6px 10px;
@@ -124,7 +270,7 @@
   font-size: 11px;
   cursor: pointer;
 }
-.page button:hover:enabled {
+.page button:not([role="combobox"]):hover:enabled {
   background: var(--game-panel-hover);
   color: var(--game-ink-100);
 }
@@ -172,8 +318,8 @@
   gap: 8px;
 }
 @container (max-width: 350px) {
-  .panel {
-    grid-template-columns: 1fr;
+  .filterGrid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 @container (min-width: 900px) {
@@ -182,10 +328,10 @@
     grid-template-columns: 260px minmax(0, 1fr);
   }
   .panel {
-    display: block;
+    align-self: start;
   }
-  .panel label {
-    margin-top: 14px;
+  .filterGrid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

@@ -4,7 +4,14 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
   push:
-    branches: [master]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   format:

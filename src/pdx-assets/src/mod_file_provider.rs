@@ -133,14 +133,14 @@ impl<P: FileProvider> FileProvider for ModFileProvider<P> {
             None => self.base.fs_file(path),
         }
     }
-    fn walk_directory(&self, path: &str, suffixes: &[&str]) -> Result<Vec<String>> {
+    fn walk_directory(&self, path: &str, ends_with: &[&str]) -> Result<Vec<String>> {
         let mut files: BTreeMap<String, (usize, String)> = self
             .base
-            .walk_directory(path, suffixes)?
+            .walk_directory(path, ends_with)?
             .into_iter()
             .map(|path| (path.clone(), (0, path)))
             .collect();
-        for (relative, index) in self.mod_files(path, suffixes)? {
+        for (relative, index) in self.mod_files(path, ends_with)? {
             files.insert(
                 format!("game/{relative}"),
                 (index + 1, format!("__mods__/{index}/{relative}")),
@@ -238,25 +238,21 @@ mod tests {
     #[test]
     fn rejects_invalid_mod_roots_and_unsupported_replace_paths() {
         let root = tempfile::tempdir().unwrap();
-        assert!(
-            ModFileProvider::new(
-                DirectoryProvider::new(root.path()),
-                &[root.path().join("missing")]
-            )
-            .is_err()
-        );
+        ModFileProvider::new(
+            DirectoryProvider::new(root.path()),
+            &[root.path().join("missing")],
+        )
+        .unwrap_err();
         fs::create_dir(root.path().join("in_game")).unwrap();
         put(
             root.path(),
             ".metadata/metadata.json",
             r#"{"replace_paths":["in_game/common/goods"]}"#,
         );
-        assert!(
-            ModFileProvider::new(
-                DirectoryProvider::new(root.path()),
-                &[root.path().to_owned()]
-            )
-            .is_err()
-        );
+        ModFileProvider::new(
+            DirectoryProvider::new(root.path()),
+            &[root.path().to_owned()],
+        )
+        .unwrap_err();
     }
 }

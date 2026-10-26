@@ -18,6 +18,11 @@ import { useMapHistory } from "./context";
 import styles from "@/features/eu5/history/Timeline.module.css";
 import { useEu5PlaythroughId } from "../store";
 import { useCurrentHistorySnapshot } from "./currentSnapshot";
+import { GameSelect } from "../components/Select";
+import { GoodSelect } from "../components/GoodSelect";
+import { Eu5Icon } from "../components/icons/Eu5Icon";
+import AdjustmentsHorizontalIcon from "@heroicons/react/24/outline/AdjustmentsHorizontalIcon";
+import MagnifyingGlassIcon from "@heroicons/react/24/outline/MagnifyingGlassIcon";
 
 type Metric =
   | "balance"
@@ -133,7 +138,7 @@ export function SaveHistory({
     return result;
   }, [metadata]);
   const focusCenters = useCountryMarketCenters(playthroughId ?? "", focusTag, visible);
-  const { marketIds, activeMarkets } = useMemo(() => {
+  const { marketIds, activeMarkets, selectedMarkets } = useMemo(() => {
     const marketIds = Object.keys(labels)
       .filter((id) =>
         focusMarketCenter != null
@@ -143,7 +148,7 @@ export function SaveHistory({
       .sort((a, b) => labels[a].localeCompare(labels[b]));
     const chosenMarkets = markets.filter((m) => marketIds.includes(m));
     const activeMarkets = chosenMarkets.length ? chosenMarkets : marketIds;
-    return { marketIds, activeMarkets };
+    return { marketIds, activeMarkets, selectedMarkets: chosenMarkets };
   }, [focusMarketCenter, focusCenters, labels, markets]);
   const countries = useMemo(
     () =>
@@ -155,9 +160,9 @@ export function SaveHistory({
   const countryOptions = useMemo(
     () =>
       countries.map((c) => (
-        <option key={c} value={c}>
+        <GameSelect.Item key={c} value={c} textValue={countryNames[c] ?? c}>
           {countryNames[c] ?? c}
-        </option>
+        </GameSelect.Item>
       )),
     [countries, countryNames],
   );
@@ -344,106 +349,142 @@ export function SaveHistory({
           </section>
         ) : (
           <div className={styles.layout}>
-            <aside className={styles.panel}>
-              <h2>History filters</h2>
-              {isMarket && (
-                <label>
-                  Metric
-                  <select value={metric} onChange={(e) => setMetric(e.target.value as Metric)}>
-                    {Object.entries(metricNames)
-                      .filter(([v]) =>
-                        ["balance", "price", "supply", "demand", "stockpile"].includes(v),
-                      )
-                      .map(([v, label]) => (
-                        <option key={v} value={v}>
-                          {label}
-                        </option>
-                      ))}
-                  </select>
-                </label>
-              )}
-              {isMarket ? (
-                <>
-                  <label>
-                    Good
-                    <select value={activeGood} onChange={(e) => setGood(e.target.value)}>
-                      {goods.map((g) => (
-                        <option key={g} value={g}>
-                          {human(g)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Find markets
-                    <input
-                      type="search"
-                      value={marketSearch}
-                      onChange={(event) => setMarketSearch(event.target.value)}
-                      placeholder="Search markets"
-                    />
-                  </label>
-                  <label>
-                    Markets · {markets.length ? `${markets.length} selected` : "all markets"}
-                    <select
-                      aria-label="Markets"
-                      multiple
-                      size={8}
-                      value={markets}
-                      onChange={(e) =>
-                        setMarkets([
-                          ...markets.filter(
-                            (id) =>
-                              !labels[id]
-                                ?.toLowerCase()
-                                .includes(marketSearch.trim().toLowerCase()),
-                          ),
-                          ...Array.from(e.target.selectedOptions).map((o) => o.value),
-                        ])
-                      }
+            <aside className={styles.panel} aria-label="History filters">
+              <div className={styles.filterHeading}>
+                <AdjustmentsHorizontalIcon aria-hidden="true" />
+                <h2>History filters</h2>
+                <span>{isMarket ? "Markets" : "Countries"}</span>
+              </div>
+              <div className={styles.filterGrid}>
+                {isMarket && (
+                  <label className={styles.field}>
+                    <span>Metric</span>
+                    <GameSelect
+                      value={metric}
+                      onValueChange={(value) => setMetric(value as Metric)}
                     >
-                      {marketIds
-                        .filter((id) =>
-                          labels[id].toLowerCase().includes(marketSearch.trim().toLowerCase()),
-                        )
-                        .map((id) => (
-                          <option key={id} value={id}>
-                            {labels[id]}
-                          </option>
-                        ))}
-                    </select>
+                      <GameSelect.Trigger aria-label="Metric">
+                        <GameSelect.Value />
+                      </GameSelect.Trigger>
+                      <GameSelect.Content>
+                        {Object.entries(metricNames)
+                          .filter(([value]) =>
+                            ["balance", "price", "supply", "demand", "stockpile"].includes(value),
+                          )
+                          .map(([value, name]) => (
+                            <GameSelect.Item key={value} value={value}>
+                              {name}
+                            </GameSelect.Item>
+                          ))}
+                      </GameSelect.Content>
+                    </GameSelect>
                   </label>
-                  {markets.length > 0 && (
-                    <button type="button" onClick={() => setMarkets([])}>
-                      Show all markets
-                    </button>
-                  )}
-                </>
-              ) : !focusTag ? (
-                <label>
-                  Country
-                  <select value={activeCountry} onChange={(e) => setCountry(e.target.value)}>
-                    <option value="world">World · owned locations</option>
-                    {countryOptions}
-                  </select>
-                </label>
-              ) : (
-                <p className={styles.help}>Following selected nation: {focusName ?? focusTag}</p>
-              )}
-              {isMarket && (
-                <label className={styles.checkbox}>
-                  <input
-                    type="checkbox"
-                    checked={indexed}
-                    onChange={(e) => setIndexed(e.target.checked)}
-                  />{" "}
-                  Index first observation to 100
-                </label>
-              )}
+                )}
+                {isMarket ? (
+                  <>
+                    <label className={styles.field}>
+                      <span>Good</span>
+                      <GoodSelect
+                        value={activeGood}
+                        onValueChange={setGood}
+                        goods={goods.map((key) => ({ key, name: human(key) }))}
+                        label="Good"
+                      />
+                    </label>
+                    <fieldset className={styles.marketPicker}>
+                      <legend>Market scope</legend>
+                      <div className={styles.scopeHeading}>
+                        <span>
+                          {selectedMarkets.length
+                            ? `${selectedMarkets.length} selected`
+                            : "All markets"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setMarkets([])}
+                          disabled={!selectedMarkets.length}
+                        >
+                          Reset
+                        </button>
+                      </div>
+                      <div className={styles.searchField}>
+                        <MagnifyingGlassIcon aria-hidden="true" />
+                        <input
+                          type="search"
+                          aria-label="Find markets"
+                          value={marketSearch}
+                          onChange={(event) => setMarketSearch(event.target.value)}
+                          placeholder="Search markets"
+                        />
+                      </div>
+                      <div className={styles.marketList} role="group" aria-label="Markets">
+                        {marketIds
+                          .filter((id) =>
+                            labels[id].toLowerCase().includes(marketSearch.trim().toLowerCase()),
+                          )
+                          .map((id) => (
+                            <label key={id} className={styles.marketOption}>
+                              <input
+                                type="checkbox"
+                                checked={selectedMarkets.includes(id)}
+                                onChange={() =>
+                                  setMarkets((previous) =>
+                                    previous.includes(id)
+                                      ? previous.filter((market) => market !== id)
+                                      : [...previous, id],
+                                  )
+                                }
+                              />
+                              <span>{labels[id]}</span>
+                            </label>
+                          ))}
+                        {!marketIds.some((id) =>
+                          labels[id].toLowerCase().includes(marketSearch.trim().toLowerCase()),
+                        ) && <p className={styles.noResults}>No markets match your search.</p>}
+                      </div>
+                      <p className={styles.scopeHint}>
+                        {selectedMarkets.length
+                          ? "Selected markets are combined in the chart."
+                          : "Select markets to narrow the chart, or leave all included."}
+                      </p>
+                    </fieldset>
+                  </>
+                ) : !focusTag ? (
+                  <label className={styles.countryField}>
+                    <span>Country</span>
+                    <GameSelect value={activeCountry} onValueChange={setCountry}>
+                      <GameSelect.Trigger aria-label="Country">
+                        <GameSelect.Value />
+                      </GameSelect.Trigger>
+                      <GameSelect.Content className="max-h-72 overflow-y-auto">
+                        <GameSelect.Item value="world">World · owned locations</GameSelect.Item>
+                        {countryOptions}
+                      </GameSelect.Content>
+                    </GameSelect>
+                  </label>
+                ) : (
+                  <p className={styles.help}>Following selected nation: {focusName ?? focusTag}</p>
+                )}
+                {isMarket && (
+                  <label className={styles.checkbox}>
+                    <input
+                      type="checkbox"
+                      checked={indexed}
+                      onChange={(event) => setIndexed(event.target.checked)}
+                    />
+                    <span>
+                      Index first observation to 100
+                      <span className={styles.checkboxHint}>
+                        Compare relative change instead of absolute amounts.
+                      </span>
+                    </span>
+                  </label>
+                )}
+              </div>
               <p className={styles.help}>
                 {isMarket
-                  ? "Supply and demand are summed across selected markets; with none selected, all markets are included. Missing observations remain gaps."
-                  : "Metrics follow this section and the selected nation. Countries are matched by stable ID; absent countries remain gaps."}
+                  ? "Supply and demand are summed across the included markets. Missing observations remain gaps."
+                  : "Compare this section across saved dates for the selected country. Missing observations remain gaps."}
               </p>
             </aside>
             <section className={styles.main}>
@@ -457,7 +498,8 @@ export function SaveHistory({
                           ? ` · ${currentSnapshot.date}`
                           : ""}
                       </span>
-                      <h2>
+                      <h2 className={styles.goodHeading}>
+                        {activeGood && <Eu5Icon family="goods" id={activeGood} size="sm" alt="" />}
                         {isMarket ? `${human(activeGood ?? "Good")} · ` : ""}
                         {metricNames[metric]}
                       </h2>
