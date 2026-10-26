@@ -177,7 +177,7 @@ dependencies = [
 [[package]]
 name = "arena-serde"
 version = "0.1.0"
-source = "git+https://github.com/rakaly/jomini.git#f100a1d5ad49eab3d1b389d763eed5a6c7e9003b"
+source = "git+https://github.com/mak8427/jomini.git?rev=bab7ac8#bab7ac81708f3c8f1b5afad39f8d166fae07f8c8"
 dependencies = [
  "arena-serde-derive",
  "bumpalo",
@@ -187,7 +187,7 @@ dependencies = [
 [[package]]
 name = "arena-serde-derive"
 version = "0.1.0"
-source = "git+https://github.com/rakaly/jomini.git#f100a1d5ad49eab3d1b389d763eed5a6c7e9003b"
+source = "git+https://github.com/mak8427/jomini.git?rev=bab7ac8#bab7ac81708f3c8f1b5afad39f8d166fae07f8c8"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1145,7 +1145,7 @@ dependencies = [
 [[package]]
 name = "eu5save"
 version = "0.1.0"
-source = "git+https://github.com/rakaly/jomini.git#f100a1d5ad49eab3d1b389d763eed5a6c7e9003b"
+source = "git+https://github.com/mak8427/jomini.git?rev=bab7ac8#bab7ac81708f3c8f1b5afad39f8d166fae07f8c8"
 dependencies = [
  "arena-serde",
  "bumpalo",

@@ -4,7 +4,8 @@ This derivative preserves the EU5 campaign analysis work from
 [`mak8427/pdx-tools`](https://github.com/mak8427/pdx-tools), starting at
 `f734d7a946fe04f22ff654cba93d66c95cbdc2ef`. Original project:
 [PDX Tools](https://github.com/pdx-tools/pdx-tools). The original license and
-copyright notices are retained.
+copyright notices are retained. EU5 save parsing uses the pinned
+[M&T Jomini fork](https://github.com/mak8427/jomini/tree/codex/mnt-save-data).
 
 ## Compile M&T game data
 
