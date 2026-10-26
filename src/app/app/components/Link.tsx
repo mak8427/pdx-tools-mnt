@@ -25,6 +25,25 @@ export const Link = React.forwardRef<
     VariantProps<typeof linkVariants> &
     ({ href: string } | { to: ComponentPropsWithoutRef<typeof LinkPrimitive>["to"] })
 >(function Link({ className, variant, children, ...props }, ref) {
+  if (import.meta.env.VITE_STATIC_VIEWER) {
+    const path = "href" in props ? props.href : props.to;
+    if (typeof path === "string" && path.startsWith("/") && path !== "/") {
+      const { to: _to, ...rest } = props as ComponentPropsWithoutRef<typeof LinkPrimitive>;
+      return (
+        <a
+          {...rest}
+          href={`https://pdx.tools${path}`}
+          ref={ref}
+          className={cx(linkVariants({ variant }), className)}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {children}
+        </a>
+      );
+    }
+    if ("href" in props && props.href === "/") props = { ...props, href: import.meta.env.BASE_URL };
+  }
   if ("href" in props) {
     const isExternal = props.href.toString().startsWith("http");
     return (

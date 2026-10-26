@@ -24,6 +24,8 @@
     "worker-configuration.d.ts",
     "env.d.ts",
     "app/**/*",
+    "pages/**/*",
+    "vite.pages.config.ts",
     "tests/**/*",
     "e2e/**/*",
     "playwright.config.ts",

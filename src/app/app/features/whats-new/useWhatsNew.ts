@@ -48,7 +48,7 @@ export const useWhatsNew = () => {
     queryKey: QUERY_KEY_INDEX,
     queryFn: fetchIndex,
     staleTime: 5 * 60 * 1000,
-    enabled: isClient,
+    enabled: isClient && !import.meta.env.VITE_STATIC_VIEWER,
   });
 
   const [releaseDates, setReleaseDates] = useState<string[]>([]);

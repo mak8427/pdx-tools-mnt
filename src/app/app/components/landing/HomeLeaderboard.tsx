@@ -33,7 +33,7 @@ const HomeLeaderboardImpl = () => {
   );
 };
 
-export const HomeLeaderboard = () => {
+const HomeLeaderboardContent = () => {
   const { ref, isIntersecting } = useIntersectionObserver<HTMLDivElement>({
     threshold: 0.1,
     rootMargin: "200px",
@@ -59,3 +59,10 @@ export const HomeLeaderboard = () => {
     </div>
   );
 };
+
+export const HomeLeaderboard = () =>
+  import.meta.env.VITE_STATIC_VIEWER ? (
+    <Link href="https://pdx.tools/eu4#achievements">View the live leaderboards on PDX Tools</Link>
+  ) : (
+    <HomeLeaderboardContent />
+  );

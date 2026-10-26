@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "react-router dev --port 3001",
     "build": "react-router build",
+    "build:pages": "vite build --config vite.pages.config.ts",
     "deploy": "wrangler deploy",
     "preview": "vite preview --port 3000",
     "generate": "drizzle-kit generate --config drizzle-kit.config.ts",

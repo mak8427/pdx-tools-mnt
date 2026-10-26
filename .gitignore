@@ -41,3 +41,5 @@ src/docs/src/pages/changelog.mdx
 
 # Local EU5 development reports
 /.local/eu5-history/
+
+/src/app/dist-pages/
