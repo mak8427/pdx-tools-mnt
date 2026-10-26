@@ -63,6 +63,7 @@
   font-size: 11px;
   color: var(--game-ink-300);
 }
+.panel input[type="search"],
 .panel select {
   display: block;
   width: 100%;
@@ -186,4 +187,34 @@
   .panel label {
     margin-top: 14px;
   }
+}
+
+.tableWrap {
+  overflow-x: auto;
+  max-height: 380px;
+  margin-top: 12px;
+}
+.marketTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.marketTable th,
+.marketTable td {
+  padding: 8px;
+  border-bottom: 1px solid var(--game-line);
+  text-align: right;
+}
+.marketTable th:first-child,
+.marketTable td:first-child {
+  text-align: left;
+}
+.marketTable th {
+  position: sticky;
+  top: 0;
+  background: var(--game-panel-2);
+  color: var(--game-ink-300);
+}
+.marketTable tbody tr:hover {
+  background: var(--game-panel-hover);
 }

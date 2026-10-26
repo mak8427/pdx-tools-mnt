@@ -365,14 +365,18 @@ function ForeignOwnerCellsTable({ cells }: { cells: BuildingTypeForeignOwnerCell
 
 export function BuildingLevelsInsight() {
   const [category, setCategory] = useState("all");
+  const [search, setSearch] = useState("");
   const insightQuery = useEu5SelectionTrigger((engine) =>
     engine.queries.getBuildingLevelsInsight(),
   );
 
   const types = insightQuery.data?.types ?? [];
   const categories = [...new Set(types.map((type) => type.category ?? "unknown"))].sort();
-  const filteredTypes =
-    category === "all" ? types : types.filter((type) => (type.category ?? "unknown") === category);
+  const filteredTypes = types.filter(
+    (type) =>
+      (category === "all" || (type.category ?? "unknown") === category) &&
+      type.building.name.toLowerCase().includes(search.trim().toLowerCase()),
+  );
   const foreignOwnerCells = insightQuery.data?.foreignOwnerCells ?? [];
   const foreignLocationRows = insightQuery.data?.foreignLocationRows ?? [];
   const topLocations = insightQuery.data?.topLocations ?? [];
@@ -392,6 +396,16 @@ export function BuildingLevelsInsight() {
           {types.length > 0 && (
             <section>
               <SectionTitle>Building levels by type</SectionTitle>
+              <label className="my-2 block text-xs text-game-ink-300">
+                Find a building
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search building types"
+                  className="mt-1 w-full rounded border border-game-line bg-game-panel px-3 py-2 text-sm text-white"
+                />
+              </label>
               <div className="flex flex-wrap gap-2 py-2" aria-label="Building category filters">
                 {["all", ...categories].map((name) => (
                   <button
@@ -402,14 +416,31 @@ export function BuildingLevelsInsight() {
                     className="rounded border px-2 py-1 text-xs text-white"
                     style={{
                       borderColor: name === "all" ? undefined : categoryColor(name),
-                      opacity: category === "all" || category === name ? 1 : 0.6,
+                      opacity: category === "all" || category === name ? 1 : 0.65,
+                      backgroundColor:
+                        category === name ? "var(--game-panel-active)" : "transparent",
                     }}
                   >
-                    {name === "all" ? "All categories" : categoryLabel(name)}
+                    {name === "all" ? "All categories" : categoryLabel(name)}{" "}
+                    <span className="text-game-ink-500">
+                      {name === "all"
+                        ? types.length
+                        : types.filter((type) => (type.category ?? "unknown") === name).length}
+                    </span>
                   </button>
                 ))}
               </div>
-              <BuildingTypesChart types={filteredTypes} />
+              {filteredTypes.length ? (
+                <>
+                  <p className="mb-1 text-xs text-game-ink-500">
+                    Showing up to 30 of {filteredTypes.length} building types · colors indicate
+                    category
+                  </p>
+                  <BuildingTypesChart types={filteredTypes} />
+                </>
+              ) : (
+                <p className="py-4 text-sm text-game-ink-500">No buildings match these filters.</p>
+              )}
             </section>
           )}
 

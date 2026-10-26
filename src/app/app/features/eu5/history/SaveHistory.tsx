@@ -90,6 +90,7 @@ export function SaveHistory({
   if (metricState.mode !== mapMode) setMetricState({ mode: mapMode, value: defaultMetric });
   const setMetric = (value: Metric) => setMetricState({ mode: mapMode, value });
   const [good, setGood] = useState(() => preferences.get(playthroughId ?? "")?.good ?? "");
+  const [marketSearch, setMarketSearch] = useState("");
   const [markets, setMarkets] = useState<string[]>(
     () => preferences.get(playthroughId ?? "")?.markets ?? [],
   );
@@ -374,23 +375,49 @@ export function SaveHistory({
                     </select>
                   </label>
                   <label>
-                    Markets · select to filter; none means all
+                    Find markets
+                    <input
+                      type="search"
+                      value={marketSearch}
+                      onChange={(event) => setMarketSearch(event.target.value)}
+                      placeholder="Search markets"
+                    />
+                  </label>
+                  <label>
+                    Markets · {markets.length ? `${markets.length} selected` : "all markets"}
                     <select
                       aria-label="Markets"
                       multiple
                       size={8}
                       value={markets}
                       onChange={(e) =>
-                        setMarkets(Array.from(e.target.selectedOptions).map((o) => o.value))
+                        setMarkets([
+                          ...markets.filter(
+                            (id) =>
+                              !labels[id]
+                                ?.toLowerCase()
+                                .includes(marketSearch.trim().toLowerCase()),
+                          ),
+                          ...Array.from(e.target.selectedOptions).map((o) => o.value),
+                        ])
                       }
                     >
-                      {marketIds.map((id) => (
-                        <option key={id} value={id}>
-                          {labels[id]}
-                        </option>
-                      ))}
+                      {marketIds
+                        .filter((id) =>
+                          labels[id].toLowerCase().includes(marketSearch.trim().toLowerCase()),
+                        )
+                        .map((id) => (
+                          <option key={id} value={id}>
+                            {labels[id]}
+                          </option>
+                        ))}
                     </select>
                   </label>
+                  {markets.length > 0 && (
+                    <button type="button" onClick={() => setMarkets([])}>
+                      Show all markets
+                    </button>
+                  )}
                 </>
               ) : !focusTag ? (
                 <label>
@@ -477,26 +504,28 @@ export function SaveHistory({
                   <p className={styles.help}>
                     Price is weighted by quantity traded. Supply and demand are saved market values.
                   </p>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Market</th>
-                        <th>Supply</th>
-                        <th>Demand</th>
-                        <th>Price</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {dates[dates.length - 1].markets.map((m) => (
-                        <tr key={`${m.marketId}/${m.good}`}>
-                          <td>{labels[String(m.center)] ?? m.centerName ?? m.center}</td>
-                          <td>{m.supply?.toFixed(2) ?? "—"}</td>
-                          <td>{m.demand?.toFixed(2) ?? "—"}</td>
-                          <td>{m.price?.toFixed(2) ?? "—"}</td>
+                  <div className={styles.tableWrap}>
+                    <table className={styles.marketTable}>
+                      <thead>
+                        <tr>
+                          <th>Market</th>
+                          <th>Supply</th>
+                          <th>Demand</th>
+                          <th>Price</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {dates[dates.length - 1].markets.map((m) => (
+                          <tr key={`${m.marketId}/${m.good}`}>
+                            <td>{labels[String(m.center)] ?? m.centerName ?? m.center}</td>
+                            <td>{m.supply?.toFixed(2) ?? "—"}</td>
+                            <td>{m.demand?.toFixed(2) ?? "—"}</td>
+                            <td>{m.price?.toFixed(2) ?? "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
               {visible && (
