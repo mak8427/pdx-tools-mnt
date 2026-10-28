@@ -216,3 +216,13 @@ it("reuses parser workers between saves, including a failed parse, and releases 
   expect(mocks.workers).toHaveLength(1);
   expect(mocks.workers[0].terminate).toHaveBeenCalledOnce();
 });
+
+it("does not append or publish observations rejected by comparison filtering", async () => {
+  mocks.parseImport.mockResolvedValue({ observation: { hash: "existing", campaignId: "current" } });
+  const opts = options({ acceptObservation: () => false });
+  const result = await importTimeline([new File(["save"], "save-0.eu5")], opts);
+  expect(result.errors).toEqual([]);
+  expect(mocks.append).not.toHaveBeenCalled();
+  expect(opts.onSnapshots).not.toHaveBeenCalled();
+  expect(opts.onProgress).toHaveBeenLastCalledWith(1, 1, "save-0.eu5", expect.anything());
+});

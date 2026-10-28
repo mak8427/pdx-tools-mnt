@@ -70,10 +70,12 @@ beforeEach(() => {
   }));
 });
 
-it("charts one campaign across game updates and excludes other playthroughs", () => {
+it("keeps the active campaign separate and offers other playthroughs for comparison", () => {
   const html = renderToString(<SaveHistory mapMode="population" />);
   expect(html).toContain('data-dates="1337-01-01@1.0.0,1338-01-01@1.4.0"');
-  expect(html).not.toContain("1339-01-01");
+  expect(html).not.toContain('data-dates="1339-01-01');
+  expect(html).toContain("Compare campaigns");
+  expect(html).toContain("Select comparison saves");
   expect(html).not.toContain("Campaign / game version");
 });
 
