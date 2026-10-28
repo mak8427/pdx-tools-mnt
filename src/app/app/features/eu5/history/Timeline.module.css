@@ -364,3 +364,12 @@
 .marketTable tbody tr:hover {
   background: var(--game-panel-hover);
 }
+
+.comparison {
+  border-top: 2px solid var(--game-line-strong);
+}
+.comparisonChart {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--game-line);
+}

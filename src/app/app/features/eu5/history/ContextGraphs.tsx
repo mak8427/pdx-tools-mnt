@@ -21,7 +21,7 @@ const realization: Metric = {
   unit: "%",
   value: (c) => ratio(c.effectiveDevelopment, c.development),
 };
-const metrics: Record<MapMode, Metric[]> = {
+export const metrics: Record<MapMode, Metric[]> = {
   political: [
     population,
     {

@@ -1,3 +1,4 @@
+import { CampaignComparison } from "./CampaignComparison";
 import { aggregateMarkets } from "./marketAggregate";
 import { campaignAnalysis } from "./analysisClient";
 import { useCountryMarketCenters, useAnalysisHistory } from "./useAnalysisHistory";
@@ -349,6 +350,17 @@ export function SaveHistory({
           </section>
         ) : (
           <div className={styles.layout}>
+            <CampaignComparison
+              campaignId={playthroughId ?? ""}
+              dates={dates}
+              mode={mapMode}
+              country={activeCountry}
+              countryName={focusName ?? countryNames[activeCountry]}
+              good={activeGood}
+              metric={metric}
+              indexed={indexed}
+              visible={visible}
+            />
             <aside className={styles.panel} aria-label="History filters">
               <div className={styles.filterHeading}>
                 <AdjustmentsHorizontalIcon aria-hidden="true" />
